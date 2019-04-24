@@ -35,17 +35,9 @@ public final class WebIdTrustManager extends X509ExtendedTrustManager {
   }
 
   /**
-   * 
-   * @see javax.net.ssl.X509TrustManager#checkClientTrusted(java.security.cert.X509Certificate[], java.lang.String)
-   */
-  @Override
-  public void checkClientTrusted(X509Certificate[] certificateChain, String authType) throws CertificateException {
-    // TODO Auto-generated method stub
-
-  }
-
-  /**
-   * 
+   * Allows for certificate issuers with an X.500 Principal of <code>O={}, CN=WebID</code>.
+   *
+   * @return A single certificate with an accepted issuer and subject of {@link Constants#WebIdIssuer}.
    * @see javax.net.ssl.X509TrustManager#getAcceptedIssuers()
    */
   @Override
@@ -54,21 +46,44 @@ public final class WebIdTrustManager extends X509ExtendedTrustManager {
   }
 
   /**
-   * 
+   * Checks the client certificate chain using the provided authentication algorithm.
+   *
+   * @param certificateChain The provided certificate chain.
+   * @param authenticationType The authentication type.
+   * @throws CertificateException if the certificate is invalid.
+   * @see javax.net.ssl.X509TrustManager#checkClientTrusted(java.security.cert.X509Certificate[], java.lang.String)
+   */
+  @Override
+  public void checkClientTrusted(X509Certificate[] certificateChain, String authenticationType) throws CertificateException {
+    // This method will no longer be called by the JSSE framework; instead it opts for one of the other two.
+  }
+
+  /**
+   * Checks the client certificate chain using the provided authentication algorithm and socket.
+   *
+   * @param certificateChain The provided certificate chain.
+   * @param authenticationType The authentication type.
+   * @param socket The socket the connection is made over.
+   * @throws CertificateException if the certificate is invalid.
    * @see javax.net.ssl.X509ExtendedTrustManager#checkClientTrusted(java.security.cert.X509Certificate[], java.lang.String, java.net.Socket)
    */
   @Override
-  public void checkClientTrusted(X509Certificate[] arg0, String arg1, Socket arg2) throws CertificateException {
+  public void checkClientTrusted(X509Certificate[] certificateChain, String authenticationType, Socket socket) throws CertificateException {
     // TODO Auto-generated method stub
 
   }
 
   /**
-   * 
+   * Checks the client certificate chain using the provided authentication algorithm and SSL engine.
+   *
+   * @param certificateChain The provided certificate chain.
+   * @param authenticationType The authentication type.
+   * @param engine The SSL engine.
+   * @throws CertificateException if the certificate is invalid.
    * @see javax.net.ssl.X509ExtendedTrustManager#checkClientTrusted(java.security.cert.X509Certificate[], java.lang.String, javax.net.ssl.SSLEngine)
    */
   @Override
-  public void checkClientTrusted(X509Certificate[] arg0, String arg1, SSLEngine arg2) throws CertificateException {
+  public void checkClientTrusted(X509Certificate[] certificateChain, String authenticationType, SSLEngine engine) throws CertificateException {
     // TODO Auto-generated method stub
 
   }
