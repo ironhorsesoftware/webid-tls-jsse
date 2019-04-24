@@ -21,12 +21,14 @@ package com.ironhorsesoftware.jsse;
  */
 public final class Provider extends java.security.Provider {
 
+  public static final String PROVIDER_NAME = "IronHorseSoftware";
+
   private static final long serialVersionUID = 4177247835096695438L;
 
   /**
    * Instantiates a new Provider for use with the JSSE libraries.
    */
   public Provider() {
-    super("IronHorseSoftware", 0.1, "WebID-TLS Provider");
+    super(PROVIDER_NAME, 0.1, "WebID-TLS Provider");
   }
 }
