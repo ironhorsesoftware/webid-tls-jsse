@@ -28,7 +28,10 @@ import javax.net.ssl.X509ExtendedTrustManager;
  */
 public final class WebIdTrustManager extends X509ExtendedTrustManager {
 
+  private X509Certificate webIdRootCertificate;
+
   WebIdTrustManager() {
+    webIdRootCertificate = new WebIdRootCertificate();
   }
 
   /**
@@ -47,7 +50,7 @@ public final class WebIdTrustManager extends X509ExtendedTrustManager {
    */
   @Override
   public X509Certificate[] getAcceptedIssuers() {
-    return null;
+    return new X509Certificate[]{ webIdRootCertificate };
   }
 
   /**

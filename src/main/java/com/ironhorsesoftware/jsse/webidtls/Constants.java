@@ -26,5 +26,5 @@ public final class Constants {
   /**
    * This represents the X.500 distinguished name for the issuer of WebID self-signed certificates.
    */
-  public static final X500Principal WebIdDistinguishedName = new X500Principal("O={}, CN=WebID");
+  public static final X500Principal WebIdIssuer = new X500Principal("O={}, CN=WebID");
 }
