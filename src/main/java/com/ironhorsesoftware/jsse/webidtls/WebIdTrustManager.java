@@ -47,6 +47,10 @@ public final class WebIdTrustManager extends X509ExtendedTrustManager {
 
   /**
    * Checks the client certificate chain using the provided authentication algorithm.
+   * This certificate will be checked against the {@link KeyStore} of known-valid certificates, and if not found,
+   * an HTTP or HTTPS request will be made to the WebID Profile on the certificate to get the public key.  If one
+   * or more public keys can be validated, the certificate will be trusted.  If not, a {@link CertificateException}
+   * will be thrown. 
    *
    * @param certificateChain The provided certificate chain.
    * @param authenticationType The authentication type.
@@ -69,8 +73,7 @@ public final class WebIdTrustManager extends X509ExtendedTrustManager {
    */
   @Override
   public void checkClientTrusted(X509Certificate[] certificateChain, String authenticationType, Socket socket) throws CertificateException {
-    // TODO Auto-generated method stub
-
+    checkClientTrusted(certificateChain, authenticationType);
   }
 
   /**
@@ -84,8 +87,7 @@ public final class WebIdTrustManager extends X509ExtendedTrustManager {
    */
   @Override
   public void checkClientTrusted(X509Certificate[] certificateChain, String authenticationType, SSLEngine engine) throws CertificateException {
-    // TODO Auto-generated method stub
-
+    checkClientTrusted(certificateChain, authenticationType);
   }
 
   /**
