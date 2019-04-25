@@ -12,7 +12,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.ironhorsesoftware.jsse.webidtls;
+package com.ironhorsesoftware.jsse.webid.tls;
 
 import javax.security.auth.x500.X500Principal;
 

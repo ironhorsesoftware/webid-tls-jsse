@@ -12,7 +12,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.ironhorsesoftware.jsse.webidtls;
+package com.ironhorsesoftware.jsse.webid.tls;
 
 import java.math.BigInteger;
 import java.security.InvalidKeyException;
