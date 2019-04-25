@@ -28,6 +28,9 @@ public final class Constants {
    */
   public static final X500Principal WEBID_ISSUER = new X500Principal("O={}, CN=WebID");
 
+  /**
+   * This is the parameterized SPARQL query used to verify if the WebID profile contains the requested public key.
+   */
   public static final String WEBID_CERT_SPARQL_QUERY = createWebIdCertQuery();
 
   private static String createWebIdCertQuery() {

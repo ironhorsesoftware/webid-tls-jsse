@@ -29,10 +29,10 @@ import javax.net.ssl.TrustManagerFactorySpi;
  */
 public final class TrustManagerFactory extends TrustManagerFactorySpi {
 
-  private WebIdTrustManager trustManager;
+  private KeyStore validatedCertificateStore;
 
   public TrustManagerFactory() {
-    trustManager = new WebIdTrustManager();
+    this.validatedCertificateStore = null;
   }
 
   /**
@@ -41,7 +41,7 @@ public final class TrustManagerFactory extends TrustManagerFactorySpi {
    */
   @Override
   protected TrustManager[] engineGetTrustManagers() {
-    return new TrustManager[]{ trustManager };
+    return new TrustManager[]{ new WebIdTrustManager(validatedCertificateStore, true) };
   }
 
   /**
@@ -50,8 +50,7 @@ public final class TrustManagerFactory extends TrustManagerFactorySpi {
    */
   @Override
   protected void engineInit(KeyStore keyStore) throws KeyStoreException {
-    // TODO Auto-generated method stub
-
+    this.validatedCertificateStore = keyStore;
   }
 
   /**
@@ -60,8 +59,7 @@ public final class TrustManagerFactory extends TrustManagerFactorySpi {
    */
   @Override
   protected void engineInit(ManagerFactoryParameters mfp) throws InvalidAlgorithmParameterException {
-    // TODO Auto-generated method stub
-
+    throw new InvalidAlgorithmParameterException("WEBID-TLS TrustManager does not use ManagerFactoryParameters.");
   }
 
 }

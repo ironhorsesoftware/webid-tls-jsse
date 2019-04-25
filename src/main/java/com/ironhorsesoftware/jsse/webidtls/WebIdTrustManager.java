@@ -18,6 +18,8 @@ import java.net.HttpURLConnection;
 import java.net.Socket;
 import java.net.URI;
 import java.net.URL;
+import java.security.KeyStore;
+import java.security.KeyStoreException;
 import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
 import java.security.interfaces.RSAPublicKey;
@@ -45,10 +47,20 @@ import org.apache.jena.riot.RDFLanguages;
  */
 public final class WebIdTrustManager extends X509ExtendedTrustManager {
 
-  private X509Certificate webIdRootCertificate;
+  private X509Certificate[] acceptedIssuers;
+  private KeyStore recognizedCertificateStore;
 
   WebIdTrustManager() {
-    webIdRootCertificate = new WebIdRootCertificate();
+    acceptedIssuers = new X509Certificate[0];
+    recognizedCertificateStore = null;
+  }
+
+  WebIdTrustManager(KeyStore keyStore, boolean requireWebIdIssuedCertificates) {
+    this.recognizedCertificateStore = keyStore;
+
+    if (requireWebIdIssuedCertificates) {
+      acceptedIssuers = new X509Certificate[]{ new WebIdRootCertificate() };
+    }
   }
 
   /**
@@ -59,8 +71,7 @@ public final class WebIdTrustManager extends X509ExtendedTrustManager {
    */
   @Override
   public X509Certificate[] getAcceptedIssuers() {
-    // TODO: Make this configurable - the set of issuers could also be empty.
-    return new X509Certificate[]{ webIdRootCertificate };
+    return acceptedIssuers;
   }
 
   /**
@@ -146,12 +157,16 @@ public final class WebIdTrustManager extends X509ExtendedTrustManager {
 
   private void checkClientTrusted(X509Certificate[] certificateChain) throws CertificateException {
     for (final WebIdClaim claim : getWebIdClaims(certificateChain)) {
-      // 1. TODO: Check claim in WebId KeyStore.
+      // 1. Check claim in WebId KeyStore.
+      if (isValidatedClaim(claim)) {
+        continue;
+      }
 
       // 2. Fetch the Web ID Profile and verify.
-      checkClaim(getWebIdProfile(createWebIdProfileConnection(claim.getUri())), claim);
+      validateClaim(getWebIdProfile(createWebIdProfileConnection(claim.getUri())), claim);
 
       // 3. Add claim to WebId KeyStore.
+      addValidatedClaim(claim);
     }
   }
 
@@ -163,9 +178,12 @@ public final class WebIdTrustManager extends X509ExtendedTrustManager {
     final ArrayList<WebIdClaim> webIdList = new ArrayList<>(certificateChain.length);
 
     for (X509Certificate cert : certificateChain) {
-      // TODO: Also verify the certificate has not expired.
+      cert.checkValidity();
 
-      if (!(cert.getPublicKey() instanceof RSAPublicKey)) {
+      if ((cert.getPublicKey() instanceof RSAPublicKey) == false) {
+        // Currently, only RSAPublicKeys can be verified in WebID-TLS.
+        // https://www.w3.org/ns/auth/cert does not specify the contents for other
+        // certificate types or public key types.
         continue;
       }
 
@@ -177,7 +195,7 @@ public final class WebIdTrustManager extends X509ExtendedTrustManager {
 
       for (List<?> alternativeName : alternativeNames) {
         try {
-          // 6 indicates an alternative name represented as a URI
+          // "6" indicates an alternative name represented as a URI.
           // https://docs.oracle.com/javase/8/docs/api/java/security/cert/X509Certificate.html#getSubjectAlternativeNames--
           if ((Integer) alternativeName.get(0) == 6) {
             final URI webIdUri = new URI(alternativeName.get(1).toString().trim());
@@ -270,7 +288,7 @@ public final class WebIdTrustManager extends X509ExtendedTrustManager {
     throw new IllegalArgumentException("Unrecognized content type " + contentType);
   }
 
-  private void checkClaim(Model profile, WebIdClaim claim) throws CertificateException {
+  private void validateClaim(Model profile, WebIdClaim claim) throws CertificateException {
     final ParameterizedSparqlString query = new ParameterizedSparqlString(Constants.WEBID_CERT_SPARQL_QUERY);
     query.setIri("webid", claim.getUri().toString());
     query.setLiteral("mod", claim.getPublicKey().getModulus().toString(), XSDDatatype.XSDpositiveInteger);
@@ -284,6 +302,30 @@ public final class WebIdTrustManager extends X509ExtendedTrustManager {
       }
     } finally {
       answerer.close();
+    }
+  }
+
+  private boolean isValidatedClaim(WebIdClaim claim) {
+    if (recognizedCertificateStore == null) {
+      return false;
+    }
+
+    try {
+      return claim.getCertificate().equals(recognizedCertificateStore.getCertificate(claim.getUri().toString()));
+
+    } catch (KeyStoreException e) {
+      return false;
+    }
+  }
+
+  private void addValidatedClaim(WebIdClaim claim) {
+    if (recognizedCertificateStore == null) {
+      return;
+    }
+
+    try {
+      recognizedCertificateStore.setCertificateEntry(claim.getUri().toString(), claim.getCertificate());
+    } catch (KeyStoreException e) {
     }
   }
 }

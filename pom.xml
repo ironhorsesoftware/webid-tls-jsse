@@ -2,7 +2,7 @@
   <modelVersion>4.0.0</modelVersion>
   <groupId>com.ironhorsesoftware</groupId>
   <artifactId>webid-tls-jsse</artifactId>
-  <version>0.0.1-SNAPSHOT</version>
+  <version>0.1.0-SNAPSHOT</version>
   <name>WebID-TLS for JSSE</name>
   <description>An integration for WebID-TLS into JSSE.</description>
   <properties>
