@@ -17,7 +17,7 @@ package com.ironhorsesoftware.jsse.webidtls;
 import java.net.HttpURLConnection;
 import java.net.Socket;
 import java.net.URI;
-import java.net.URLConnection;
+import java.net.URL;
 import java.security.PublicKey;
 import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
@@ -25,11 +25,12 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 
-import javax.net.ssl.HttpsURLConnection;
 import javax.net.ssl.SSLEngine;
 import javax.net.ssl.X509ExtendedTrustManager;
 
 import org.apache.jena.rdf.model.Model;
+import org.apache.jena.rdf.model.ModelFactory;
+import org.apache.jena.riot.RDFLanguages;
 
 /**
  * This implements an {@link X509ExtendedTrustManager} for WebID-TLS.
@@ -143,6 +144,8 @@ public final class WebIdTrustManager extends X509ExtendedTrustManager {
 
       // 2. Fetch the Web ID Profile and verify.
       checkClaim(getWebIdProfile(createWebIdProfileConnection(claim.getUri())), claim.getPublicKey());
+
+      // 3. Add claim to WebId KeyStore.
     }
   }
 
@@ -187,21 +190,33 @@ public final class WebIdTrustManager extends X509ExtendedTrustManager {
     final HttpURLConnection connection;
 
     try {
-      // Massage the WebID Profile from the WebID URI.
+      // Retrieve the Web ID Profile URL from the Web ID URI.
+      final URL webIdProfile;
 
-      final URLConnection urlConnection = webId.toURL().openConnection();
+      if ((webId.getFragment() != null) && !webId.getFragment().isEmpty()) {
+        // The profile URL is defined to be the URL to the left of the fragment (#)
+        final String[] split = webId.toString().split("#");
+        if ((split == null) || (split.length != 2)) {
+          throw new CertificateException("URI " + webId + " could not be split into two pieces.");
+        }
 
-      if (urlConnection instanceof HttpsURLConnection) {
-        final HttpsURLConnection httpsConnection = (HttpsURLConnection) urlConnection;
+        webIdProfile = new URL(split[0]);
 
-        // Do stuff with the HTTPS connection.
-
-        connection = httpsConnection;
       } else {
-        connection = (HttpURLConnection) urlConnection;
+        // The request will be redirected, and we will just follow the redirect.
+        webIdProfile = webId.toURL();
       }
 
-      // Do stuff with the HTTP connection.
+      connection = (HttpURLConnection) webIdProfile.openConnection();
+
+      connection.setInstanceFollowRedirects(true);
+      connection.setRequestProperty("Accept",
+          String.join(
+              ",",
+              RDFLanguages.TURTLE.getHeaderString(),
+              RDFLanguages.RDFXML.getHeaderString(),
+              RDFLanguages.NTRIPLES.getHeaderString(),
+              RDFLanguages.JSONLD.getHeaderString()));
 
     } catch (Exception e) {
       throw new CertificateException("Unable to construct a Web ID Profile connection to " + webId.toString(), e);
@@ -211,7 +226,38 @@ public final class WebIdTrustManager extends X509ExtendedTrustManager {
   }
 
   private Model getWebIdProfile(HttpURLConnection connection) throws CertificateException {
-    return null;
+    final Model profile = ModelFactory.createDefaultModel();
+
+    try {
+       connection.connect();
+
+       profile.read(connection.getInputStream(), "http://xmlns.com/foaf/0.1/", getJenaRdfEncodingType(connection.getContentType()));
+
+    } catch (Exception e) {
+      throw new CertificateException("Failed to connect to the WebID Profile " + connection.getURL(), e);
+
+    } finally {
+      connection.disconnect();
+    }
+
+    return profile;
+  }
+
+  private String getJenaRdfEncodingType(String contentType) {
+    if (contentType.equals(RDFLanguages.TURTLE.getHeaderString())) {
+      return RDFLanguages.TURTLE.getName();
+
+    } else if (contentType.equals(RDFLanguages.RDFXML.getHeaderString())) {
+      return RDFLanguages.RDFXML.getName();
+
+    } else if (contentType.equals(RDFLanguages.NTRIPLES.getHeaderString())) {
+      return RDFLanguages.NTRIPLES.getName();
+
+    } else if (contentType.equals(RDFLanguages.JSONLD.getHeaderString())) {
+      return RDFLanguages.JSONLD.getName();
+    }
+
+    throw new IllegalArgumentException("Unrecognized content type " + contentType);
   }
 
   private void checkClaim(Model profile, PublicKey claimedKey) throws CertificateException {
