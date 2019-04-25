@@ -14,14 +14,18 @@
  */
 package com.ironhorsesoftware.jsse.webidtls;
 
+import java.net.HttpURLConnection;
 import java.net.Socket;
 import java.net.URI;
+import java.net.URLConnection;
+import java.security.PublicKey;
 import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 
+import javax.net.ssl.HttpsURLConnection;
 import javax.net.ssl.SSLEngine;
 import javax.net.ssl.X509ExtendedTrustManager;
 
@@ -133,12 +137,12 @@ public final class WebIdTrustManager extends X509ExtendedTrustManager {
   }
 
   private void checkClientTrusted(X509Certificate[] certificateChain) throws CertificateException {
-    getWebIdProfile(certificateChain);
-  }
+    for (final WebIdClaim claim : getWebIdClaims(certificateChain)) {
+      // 1. TODO: Check claim in WebId KeyStore.
 
-  private Model getWebIdProfile(X509Certificate[] certificateChain) throws CertificateException {
-    getWebIdClaims(certificateChain);
-    return null;
+      // 2. Fetch the Web ID Profile and verify.
+      checkClaim(getWebIdProfile(createWebIdProfileConnection(claim.getUri())), claim.getPublicKey());
+    }
   }
 
   private List<WebIdClaim> getWebIdClaims(X509Certificate[] certificateChain) throws CertificateException {
@@ -161,7 +165,7 @@ public final class WebIdTrustManager extends X509ExtendedTrustManager {
           // https://docs.oracle.com/javase/8/docs/api/java/security/cert/X509Certificate.html#getSubjectAlternativeNames--
           if ((Integer) alternativeName.get(0) == 6) {
             final URI webIdUri = new URI(alternativeName.get(1).toString().trim());
-            webIdList.add(new WebIdClaim(webIdUri, cert.getPublicKey()));
+            webIdList.add(new WebIdClaim(cert, webIdUri));
           }
         } catch (Exception e) {
           throw new CertificateException("Malformed SubjectAlternateName URI for Certificate of Subject " + cert.getSubjectDN().getName(), e);
@@ -170,5 +174,44 @@ public final class WebIdTrustManager extends X509ExtendedTrustManager {
     }
 
     return webIdList;
+  }
+
+  private HttpURLConnection createWebIdProfileConnection(URI webId) throws CertificateException {
+    if ((webId.getScheme() == null) || !webId.getScheme().equalsIgnoreCase("http") && !webId.getScheme().equalsIgnoreCase("https")) {
+      throw new CertificateException("WebIDs can only be validated via HTTP or HTTPS. " + webId.toString() + " cannot be verified.");
+    }
+
+    final HttpURLConnection connection;
+
+    try {
+      // Massage the WebID Profile from the WebID URI.
+
+      final URLConnection urlConnection = webId.toURL().openConnection();
+
+      if (urlConnection instanceof HttpsURLConnection) {
+        final HttpsURLConnection httpsConnection = (HttpsURLConnection) urlConnection;
+
+        // Do stuff with the HTTPS connection.
+
+        connection = httpsConnection;
+      } else {
+        connection = (HttpURLConnection) urlConnection;
+      }
+
+      // Do stuff with the HTTP connection.
+
+    } catch (Exception e) {
+      throw new CertificateException("Unable to construct a Web ID Profile connection to " + webId.toString(), e);
+    }
+
+    return connection;
+  }
+
+  private Model getWebIdProfile(HttpURLConnection connection) throws CertificateException {
+    return null;
+  }
+
+  private void checkClaim(Model profile, PublicKey claimedKey) throws CertificateException {
+    
   }
 }
