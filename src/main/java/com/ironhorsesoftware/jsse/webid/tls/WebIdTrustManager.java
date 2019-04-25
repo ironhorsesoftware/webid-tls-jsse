@@ -19,7 +19,6 @@ import java.net.Socket;
 import java.net.URI;
 import java.net.URL;
 import java.security.KeyStore;
-import java.security.KeyStoreException;
 import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
 import java.security.interfaces.RSAPublicKey;
@@ -48,15 +47,15 @@ import org.apache.jena.riot.RDFLanguages;
 public final class WebIdTrustManager extends X509ExtendedTrustManager {
 
   private X509Certificate[] acceptedIssuers;
-  private KeyStore recognizedCertificateStore;
+  private KeyStore validatedCertificateStore;
 
-  WebIdTrustManager() {
+  public WebIdTrustManager() {
     acceptedIssuers = new X509Certificate[0];
-    recognizedCertificateStore = null;
+    validatedCertificateStore = null;
   }
 
-  WebIdTrustManager(KeyStore keyStore, boolean requireWebIdIssuedCertificates) {
-    this.recognizedCertificateStore = keyStore;
+  public WebIdTrustManager(KeyStore keyStore, boolean requireWebIdIssuedCertificates) {
+    this.validatedCertificateStore = keyStore;
 
     if (requireWebIdIssuedCertificates) {
       acceptedIssuers = new X509Certificate[]{ new WebIdRootCertificate() };
@@ -182,8 +181,8 @@ public final class WebIdTrustManager extends X509ExtendedTrustManager {
 
       if ((cert.getPublicKey() instanceof RSAPublicKey) == false) {
         // Currently, only RSAPublicKeys can be verified in WebID-TLS.
-        // https://www.w3.org/ns/auth/cert does not specify the contents for other
-        // certificate types or public key types.
+        // https://www.w3.org/ns/auth/cert does not specify the contents
+        // for other certificate types or public key types.
         continue;
       }
 
@@ -211,7 +210,7 @@ public final class WebIdTrustManager extends X509ExtendedTrustManager {
   }
 
   private HttpURLConnection createWebIdProfileConnection(URI webId) throws CertificateException {
-    if ((webId.getScheme() == null) || !webId.getScheme().equalsIgnoreCase("http") && !webId.getScheme().equalsIgnoreCase("https")) {
+    if ((webId.getScheme() == null) || (!webId.getScheme().equalsIgnoreCase("http") && !webId.getScheme().equalsIgnoreCase("https"))) {
       throw new CertificateException("WebIDs can only be validated via HTTP or HTTPS. " + webId.toString() + " cannot be verified.");
     }
 
@@ -306,26 +305,26 @@ public final class WebIdTrustManager extends X509ExtendedTrustManager {
   }
 
   private boolean isValidatedClaim(WebIdClaim claim) {
-    if (recognizedCertificateStore == null) {
+    if (validatedCertificateStore == null) {
       return false;
     }
 
     try {
-      return claim.getCertificate().equals(recognizedCertificateStore.getCertificate(claim.getUri().toString()));
+      return claim.getCertificate().equals(validatedCertificateStore.getCertificate(claim.getUri().toString()));
 
-    } catch (KeyStoreException e) {
+    } catch (Exception e) {
       return false;
     }
   }
 
   private void addValidatedClaim(WebIdClaim claim) {
-    if (recognizedCertificateStore == null) {
+    if (validatedCertificateStore == null) {
       return;
     }
 
     try {
-      recognizedCertificateStore.setCertificateEntry(claim.getUri().toString(), claim.getCertificate());
-    } catch (KeyStoreException e) {
+      validatedCertificateStore.setCertificateEntry(claim.getUri().toString(), claim.getCertificate());
+    } catch (Exception e) {
     }
   }
 }

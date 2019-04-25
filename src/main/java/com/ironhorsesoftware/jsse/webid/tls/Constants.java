@@ -42,7 +42,7 @@ public final class Constants {
     queryBuilder.append("ASK {").append(nl);
     queryBuilder.append("   ?webid :key [").append(nl);
     queryBuilder.append("      :modulus ?mod;").append(nl);
-    queryBuilder.append("      :exponent ?exp").append(nl);
+    queryBuilder.append("      :exponent ?exp;").append(nl);
     queryBuilder.append("   ] .").append(nl);
     queryBuilder.append("}");
 
