@@ -52,6 +52,7 @@ public final class WebIdTrustManager extends X509ExtendedTrustManager {
    */
   @Override
   public X509Certificate[] getAcceptedIssuers() {
+    // TODO: Make this configurable - the set of issuers could also be empty.
     return new X509Certificate[]{ webIdRootCertificate };
   }
 
@@ -153,6 +154,8 @@ public final class WebIdTrustManager extends X509ExtendedTrustManager {
     final ArrayList<WebIdClaim> webIdList = new ArrayList<>(certificateChain.length);
 
     for (X509Certificate cert : certificateChain) {
+      // TODO: Also verify the certificate has not expired.
+
       final Collection<List<?>> alternativeNames = cert.getSubjectAlternativeNames();
 
       if (alternativeNames == null) {
