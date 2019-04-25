@@ -20,14 +20,15 @@ import java.security.cert.X509Certificate;
 import java.security.interfaces.RSAPublicKey;
 
 /**
- * This class represnets a 
+ * This class represents a claim of a WebID to an
+ * RSAPublicKey, as defined by its X.509 certificate.
  *
  * @author Mike Pigott (mpigott@ironhorsesoftware.com)
  */
 final class WebIdClaim {
-  private X509Certificate certificate;
-  private URI uri;
-  private RSAPublicKey publicKey;
+  private final X509Certificate certificate;
+  private final URI uri;
+  private final RSAPublicKey publicKey;
 
   /**
    * Constructs a new WebID claim to validate.

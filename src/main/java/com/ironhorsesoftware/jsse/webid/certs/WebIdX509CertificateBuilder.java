@@ -14,11 +14,14 @@
  */
 package com.ironhorsesoftware.jsse.webid.certs;
 
+import org.bouncycastle.mozilla.jcajce.JcaSignedPublicKeyAndChallenge;
+
 /**
- * 
+ * This class is used to construct self-signed WebID X.509 certificates.
  *
  * @author Mike Pigott (mpigott@ironhorsesoftware.com)
  */
-public final class WebIdCertificateRequest {
+public final class WebIdX509CertificateBuilder {
+  private JcaSignedPublicKeyAndChallenge pbkac;
 
 }
