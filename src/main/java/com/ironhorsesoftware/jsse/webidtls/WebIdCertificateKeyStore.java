@@ -31,7 +31,7 @@ import java.util.Enumeration;
  * @author Mike Pigott (mpigott@ironhorsesoftware.com)
  *
  */
-public final class KeyStore extends KeyStoreSpi {
+public final class WebIdCertificateKeyStore extends KeyStoreSpi {
 
   /**
    * 

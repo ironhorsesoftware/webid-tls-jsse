@@ -15,11 +15,17 @@
 package com.ironhorsesoftware.jsse.webidtls;
 
 import java.net.Socket;
+import java.net.URI;
 import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.List;
 
 import javax.net.ssl.SSLEngine;
 import javax.net.ssl.X509ExtendedTrustManager;
+
+import org.apache.jena.rdf.model.Model;
 
 /**
  * This implements an {@link X509ExtendedTrustManager} for WebID-TLS.
@@ -47,7 +53,7 @@ public final class WebIdTrustManager extends X509ExtendedTrustManager {
 
   /**
    * Checks the client certificate chain using the provided authentication algorithm.
-   * This certificate will be checked against the {@link KeyStore} of known-valid certificates, and if not found,
+   * This certificate will be checked against the {@link WebIdCertificateKeyStore} of known-valid certificates, and if not found,
    * an HTTP or HTTPS request will be made to the WebID Profile on the certificate to get the public key.  If one
    * or more public keys can be validated, the certificate will be trusted.  If not, a {@link CertificateException}
    * will be thrown. 
@@ -59,7 +65,7 @@ public final class WebIdTrustManager extends X509ExtendedTrustManager {
    */
   @Override
   public void checkClientTrusted(X509Certificate[] certificateChain, String authenticationType) throws CertificateException {
-    // This method will no longer be called by the JSSE framework; instead it opts for one of the other two.
+    checkClientTrusted(certificateChain);
   }
 
   /**
@@ -126,4 +132,43 @@ public final class WebIdTrustManager extends X509ExtendedTrustManager {
     checkServerTrusted(certificateChain, authenticationType);
   }
 
+  private void checkClientTrusted(X509Certificate[] certificateChain) throws CertificateException {
+    getWebIdProfile(certificateChain);
+  }
+
+  private Model getWebIdProfile(X509Certificate[] certificateChain) throws CertificateException {
+    getWebIdClaims(certificateChain);
+    return null;
+  }
+
+  private List<WebIdClaim> getWebIdClaims(X509Certificate[] certificateChain) throws CertificateException {
+    if ((certificateChain == null) || (certificateChain.length == 0)) {
+      throw new CertificateException("The certificate chain is empty.");
+    }
+
+    final ArrayList<WebIdClaim> webIdList = new ArrayList<>(certificateChain.length);
+
+    for (X509Certificate cert : certificateChain) {
+      final Collection<List<?>> alternativeNames = cert.getSubjectAlternativeNames();
+
+      if (alternativeNames == null) {
+        continue;
+      }
+
+      for (List<?> alternativeName : alternativeNames) {
+        try {
+          // 6 indicates an alternative name represented as a URI
+          // https://docs.oracle.com/javase/8/docs/api/java/security/cert/X509Certificate.html#getSubjectAlternativeNames--
+          if ((Integer) alternativeName.get(0) == 6) {
+            final URI webIdUri = new URI(alternativeName.get(1).toString().trim());
+            webIdList.add(new WebIdClaim(webIdUri, cert.getPublicKey()));
+          }
+        } catch (Exception e) {
+          throw new CertificateException("Malformed SubjectAlternateName URI for Certificate of Subject " + cert.getSubjectDN().getName(), e);
+        }
+      }
+    }
+
+    return webIdList;
+  }
 }
