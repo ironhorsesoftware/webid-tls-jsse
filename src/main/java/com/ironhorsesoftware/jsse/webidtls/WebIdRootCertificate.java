@@ -44,23 +44,23 @@ final class WebIdRootCertificate extends X509Certificate {
   /**
    * Returns the Web ID Issuer.
    *
-   * @return {@link Constants#WebIdIssuer}.
+   * @return {@link Constants#WEBID_ISSUER}.
    * @see java.security.cert.X509Certificate#getIssuerDN()
    */
   @Override
   public Principal getIssuerDN() {
-    return Constants.WebIdIssuer;
+    return Constants.WEBID_ISSUER;
   }
 
   /**
    * Returns the Web ID Issuer.
    *
-   * @return {@link Constants#WebIdIssuer}.
+   * @return {@link Constants#WEBID_ISSUER}.
    * @see java.security.cert.X509Certificate#getSubjectDN()
    */
   @Override
   public Principal getSubjectDN() {
-    return Constants.WebIdIssuer;
+    return Constants.WEBID_ISSUER;
   }
 
   /**

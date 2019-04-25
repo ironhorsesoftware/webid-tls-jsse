@@ -18,9 +18,9 @@ import java.net.HttpURLConnection;
 import java.net.Socket;
 import java.net.URI;
 import java.net.URL;
-import java.security.PublicKey;
 import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
+import java.security.interfaces.RSAPublicKey;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
@@ -28,6 +28,12 @@ import java.util.List;
 import javax.net.ssl.SSLEngine;
 import javax.net.ssl.X509ExtendedTrustManager;
 
+import org.apache.jena.datatypes.xsd.XSDDatatype;
+import org.apache.jena.query.ParameterizedSparqlString;
+import org.apache.jena.query.Query;
+import org.apache.jena.query.QueryExecution;
+import org.apache.jena.query.QueryExecutionFactory;
+import org.apache.jena.query.QueryFactory;
 import org.apache.jena.rdf.model.Model;
 import org.apache.jena.rdf.model.ModelFactory;
 import org.apache.jena.riot.RDFLanguages;
@@ -48,7 +54,7 @@ public final class WebIdTrustManager extends X509ExtendedTrustManager {
   /**
    * Allows for certificate issuers with an X.500 Principal of <code>O={}, CN=WebID</code>.
    *
-   * @return A single certificate with an accepted issuer and subject of {@link Constants#WebIdIssuer}.
+   * @return A single certificate with an accepted issuer and subject of {@link Constants#WEBID_ISSUER}.
    * @see javax.net.ssl.X509TrustManager#getAcceptedIssuers()
    */
   @Override
@@ -143,7 +149,7 @@ public final class WebIdTrustManager extends X509ExtendedTrustManager {
       // 1. TODO: Check claim in WebId KeyStore.
 
       // 2. Fetch the Web ID Profile and verify.
-      checkClaim(getWebIdProfile(createWebIdProfileConnection(claim.getUri())), claim.getPublicKey());
+      checkClaim(getWebIdProfile(createWebIdProfileConnection(claim.getUri())), claim);
 
       // 3. Add claim to WebId KeyStore.
     }
@@ -159,6 +165,10 @@ public final class WebIdTrustManager extends X509ExtendedTrustManager {
     for (X509Certificate cert : certificateChain) {
       // TODO: Also verify the certificate has not expired.
 
+      if (!(cert.getPublicKey() instanceof RSAPublicKey)) {
+        continue;
+      }
+
       final Collection<List<?>> alternativeNames = cert.getSubjectAlternativeNames();
 
       if (alternativeNames == null) {
@@ -171,7 +181,7 @@ public final class WebIdTrustManager extends X509ExtendedTrustManager {
           // https://docs.oracle.com/javase/8/docs/api/java/security/cert/X509Certificate.html#getSubjectAlternativeNames--
           if ((Integer) alternativeName.get(0) == 6) {
             final URI webIdUri = new URI(alternativeName.get(1).toString().trim());
-            webIdList.add(new WebIdClaim(cert, webIdUri));
+            webIdList.add(new WebIdClaim(cert, webIdUri, (RSAPublicKey) cert.getPublicKey()));
           }
         } catch (Exception e) {
           throw new CertificateException("Malformed SubjectAlternateName URI for Certificate of Subject " + cert.getSubjectDN().getName(), e);
@@ -260,7 +270,20 @@ public final class WebIdTrustManager extends X509ExtendedTrustManager {
     throw new IllegalArgumentException("Unrecognized content type " + contentType);
   }
 
-  private void checkClaim(Model profile, PublicKey claimedKey) throws CertificateException {
-    
+  private void checkClaim(Model profile, WebIdClaim claim) throws CertificateException {
+    final ParameterizedSparqlString query = new ParameterizedSparqlString(Constants.WEBID_CERT_SPARQL_QUERY);
+    query.setIri("webid", claim.getUri().toString());
+    query.setLiteral("mod", claim.getPublicKey().getModulus().toString(), XSDDatatype.XSDpositiveInteger);
+    query.setLiteral("exp", claim.getPublicKey().getPublicExponent().toString(), XSDDatatype.XSDpositiveInteger);
+
+    final Query ask = QueryFactory.create(query.toString());
+    QueryExecution answerer = QueryExecutionFactory.create(ask, profile);
+    try {
+      if (!answerer.execAsk()) {
+        throw new CertificateException("Cannot find RSA Public Key in profile " + claim.getUri() + " for provided certificate.");
+      }
+    } finally {
+      answerer.close();
+    }
   }
 }

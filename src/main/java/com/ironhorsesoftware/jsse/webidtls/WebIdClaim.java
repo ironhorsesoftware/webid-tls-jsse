@@ -17,6 +17,7 @@ package com.ironhorsesoftware.jsse.webidtls;
 import java.net.URI;
 import java.security.PublicKey;
 import java.security.cert.X509Certificate;
+import java.security.interfaces.RSAPublicKey;
 
 /**
  * This class represnets a 
@@ -26,6 +27,7 @@ import java.security.cert.X509Certificate;
 final class WebIdClaim {
   private X509Certificate certificate;
   private URI uri;
+  private RSAPublicKey publicKey;
 
   /**
    * Constructs a new WebID claim to validate.
@@ -33,9 +35,10 @@ final class WebIdClaim {
    * @param certificate The certificate representing the claim.
    * @param uri The URI representing the Web ID to validate.
    */
-  WebIdClaim(X509Certificate certificate, URI uri) {
+  WebIdClaim(X509Certificate certificate, URI uri, RSAPublicKey publicKey) {
     this.certificate = certificate;
     this.uri = uri;
+    this.publicKey = publicKey;
   }
 
   /**
@@ -53,8 +56,8 @@ final class WebIdClaim {
    *
    * @return the {@link PublicKey}.
    */
-  PublicKey getPublicKey() {
-    return certificate.getPublicKey();
+  RSAPublicKey getPublicKey() {
+    return publicKey;
   }
 
   /**
