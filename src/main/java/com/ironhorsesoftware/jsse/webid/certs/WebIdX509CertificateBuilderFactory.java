@@ -15,9 +15,16 @@
 package com.ironhorsesoftware.jsse.webid.certs;
 
 import java.math.BigInteger;
+import java.security.Key;
+import java.security.KeyStore;
+import java.security.KeyStoreException;
+import java.security.NoSuchAlgorithmException;
 import java.security.PrivateKey;
+import java.security.Provider;
 import java.security.PublicKey;
 import java.security.SecureRandom;
+import java.security.UnrecoverableKeyException;
+import java.security.cert.Certificate;
 import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
 import java.util.Date;
@@ -44,41 +51,73 @@ import com.ironhorsesoftware.jsse.webid.Constants;
  */
 public final class WebIdX509CertificateBuilderFactory {
 
-  private static long ONE_HOUR = 60L * 60L * 1000L;
-  private static long TWENTY_YEARS = 20L * 366L * 24L * 60L * 60L * 1000L;
-
   private SecureRandom rng = new SecureRandom();
-  private BouncyCastleProvider provider = new BouncyCastleProvider();
+  private Provider provider = new BouncyCastleProvider();
 
   private X509Certificate webIdRootCertificate;
   private PrivateKey webIdRootPrivateKey;
 
   public WebIdX509CertificateBuilderFactory(PublicKey webIdRootPublicKey, PrivateKey webIdRootPrivateKey) throws OperatorCreationException, CertificateException, CertIOException {
+    this.webIdRootCertificate = createWebIdRootSelfSignedCertificate(provider, rng, webIdRootPublicKey, webIdRootPrivateKey); 
+    this.webIdRootPrivateKey = webIdRootPrivateKey;
+  }
 
+  public WebIdX509CertificateBuilderFactory(X509Certificate certificate, PrivateKey privateKey) throws CertIOException, CertificateException, OperatorCreationException {
+    this.webIdRootPrivateKey = privateKey;
+
+    if (certificate.getSubjectDN().equals(Constants.WEBID_ISSUER)) {
+      this.webIdRootCertificate = certificate;
+    } else {
+      this.webIdRootCertificate = createWebIdRootSelfSignedCertificate(this.provider, this.rng, certificate.getPublicKey(), this.webIdRootPrivateKey);
+    }
+  }
+
+  public WebIdX509CertificateBuilderFactory(KeyStore keyStore, String alias, char[] password) throws UnrecoverableKeyException, KeyStoreException, NoSuchAlgorithmException, CertIOException, CertificateException, OperatorCreationException {
+    final Key key = keyStore.getKey(alias, password);
+
+    if ((key == null) || !(key instanceof PrivateKey)) {
+      throw new IllegalArgumentException("Key \"" + alias + "\" either does not exist or is not a private key.");
+    }
+
+    final Certificate cert = keyStore.getCertificate(alias);
+    if ((cert == null) || !(cert instanceof X509Certificate)) {
+      throw new IllegalArgumentException("Certificate \"" + alias + "\" either does not exist or is not an X.509 Certificate.");
+    }
+
+    this.webIdRootPrivateKey = (PrivateKey) key;
+
+    final X509Certificate certificate = (X509Certificate) cert;
+    if (certificate.getSubjectDN().equals(Constants.WEBID_ISSUER)) {
+      this.webIdRootCertificate = certificate;
+    } else {
+      this.webIdRootCertificate = createWebIdRootSelfSignedCertificate(this.provider, this.rng, certificate.getPublicKey(), this.webIdRootPrivateKey);
+    }
+    
+  }
+
+  private static X509Certificate createWebIdRootSelfSignedCertificate(Provider provider, SecureRandom rng, PublicKey publicKey, PrivateKey privateKey) throws CertIOException, CertificateException, OperatorCreationException {
     final long now = System.currentTimeMillis();
 
     final JcaX509v3CertificateBuilder builder =
         new JcaX509v3CertificateBuilder(
             Constants.WEBID_ISSUER,
             BigInteger.valueOf(rng.nextLong()),
-            new Date(now - ONE_HOUR),
-            new Date(now + TWENTY_YEARS),
+            new Date(now - Constants.ONE_HOUR_IN_MILLIS),
+            new Date(now + Constants.TWENTY_YEARS_IN_MILLIS),
             Constants.WEBID_ISSUER,
-            webIdRootPublicKey);
+            publicKey);
 
     builder.addExtension(Extension.keyUsage, true, new KeyUsage(KeyUsage.keyCertSign));  
     builder.addExtension(Extension.basicConstraints, false, new BasicConstraints(true));  
 
-    final JcaContentSignerBuilder signerBuilder = new JcaContentSignerBuilder("SHA512withRSA");
+    final JcaContentSignerBuilder signerBuilder = new JcaContentSignerBuilder(Constants.SIGNATURE_ALGORITHM_SHA512withRSA);
     signerBuilder.setProvider(provider);
 
     final JcaX509CertificateConverter converter = new JcaX509CertificateConverter();
-
-    this.webIdRootCertificate = converter.getCertificate(builder.build(signerBuilder.build(webIdRootPrivateKey)));
-    this.webIdRootPrivateKey = webIdRootPrivateKey;
+    return converter.getCertificate(builder.build(signerBuilder.build(privateKey)));
   }
 
   public WebIdX509CertificateBuilder newWebIdX509CertificateBuilder() {
-    return new WebIdX509CertificateBuilder(provider, webIdRootCertificate, webIdRootPrivateKey);
+    return new WebIdX509CertificateBuilder(webIdRootCertificate, webIdRootPrivateKey);
   }
 }

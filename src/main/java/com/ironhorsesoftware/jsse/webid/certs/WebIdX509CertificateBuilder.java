@@ -22,6 +22,7 @@ import java.security.NoSuchProviderException;
 import java.security.PrivateKey;
 import java.security.Provider;
 import java.security.PublicKey;
+import java.security.SecureRandom;
 import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
 import java.security.interfaces.RSAPublicKey;
@@ -40,6 +41,8 @@ import org.bouncycastle.mozilla.jcajce.JcaSignedPublicKeyAndChallenge;
 import org.bouncycastle.operator.OperatorCreationException;
 import org.bouncycastle.operator.jcajce.JcaContentSignerBuilder;
 
+import com.ironhorsesoftware.jsse.webid.Constants;
+
 /**
  * This class is used to construct self-signed WebID X.509 certificates.
  *
@@ -49,6 +52,7 @@ public final class WebIdX509CertificateBuilder {
   private Provider provider;
   private X509Certificate issuerCert;
   private PrivateKey issuerPrivateKey;
+  private SecureRandom rng;
 
   private String commonName;
   private String emailAddress;
@@ -56,16 +60,17 @@ public final class WebIdX509CertificateBuilder {
   private List<URI> webIds;
   private int yearsValid;
 
-  WebIdX509CertificateBuilder(Provider provider, X509Certificate issuerCertificate, PrivateKey issuerPrivateKey) {
-    this.provider = provider;
+  WebIdX509CertificateBuilder(X509Certificate issuerCertificate, PrivateKey issuerPrivateKey) {
+    this.provider = new org.bouncycastle.jce.provider.BouncyCastleProvider();
+    this.rng = new SecureRandom();
     this.issuerCert = issuerCertificate;
     this.issuerPrivateKey = issuerPrivateKey;
 
-    commonName = null;
-    emailAddress = null;
-    publicKey = null;
-    webIds = new java.util.ArrayList<URI>();
-    yearsValid = 5;
+    this.commonName = null;
+    this.emailAddress = null;
+    this.publicKey = null;
+    this.webIds = new java.util.ArrayList<URI>();
+    this.yearsValid = 5;
   }
 
   public WebIdX509CertificateBuilder setCommonName(String commonName) {
@@ -138,14 +143,16 @@ public final class WebIdX509CertificateBuilder {
   public X509Certificate build() throws CertIOException, CertificateException, OperatorCreationException {
     checkValidity();
 
+    final long now = System.currentTimeMillis();
+
     final JcaX509v3CertificateBuilder builder =
         new JcaX509v3CertificateBuilder(
-            this.issuerCert, // Issuer
-            BigInteger.ONE,  // Serial Number
-            new Date(),      // Valid Starting
-            new Date(),      // Valid Until
-            this.issuerCert.getSubjectX500Principal(),     // Subject
-            this.publicKey); // Public Key
+            this.issuerCert,                                  // Issuer
+            BigInteger.valueOf(rng.nextLong()),               // Serial Number
+            new Date(now - Constants.ONE_HOUR_IN_MILLIS),     // Valid Starting
+            new Date(now + Constants.TWENTY_YEARS_IN_MILLIS), // Valid Until
+            this.issuerCert.getSubjectX500Principal(),        // Subject
+            this.publicKey);                                  // Public Key
 
     builder.addExtension(Extension.basicConstraints, false, new BasicConstraints(false));
 
