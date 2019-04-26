@@ -49,7 +49,7 @@ import com.ironhorsesoftware.jsse.webid.Constants;
 public final class WebIdTrustManager extends X509ExtendedTrustManager {
 
   // This is the parameterized SPARQL query used to verify if the WebID profile contains the requested public key.
-  private static final String WEBID_CERT_SPARQL_QUERY = WebIdTrustManager.createWebIdCertQuery();
+  private static final String WEBID_CERT_SPARQL_QUERY = createWebIdCertQuery();
 
   private static String createWebIdCertQuery() {
     final String nl = System.getProperty("line.separator");
