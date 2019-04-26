@@ -29,6 +29,8 @@ import java.security.cert.X509Certificate;
 import java.util.Date;
 import java.util.Set;
 
+import com.ironhorsesoftware.jsse.webid.Constants;
+
 /**
  * An instance of this class is returned by {@link WebIdTrustManager#getAcceptedIssuers()}
  * for use when requesting certificates from the client, to ensure they are WebID certificates.

@@ -23,7 +23,7 @@ import javax.security.auth.x500.X500Principal;
 
 import org.bouncycastle.mozilla.jcajce.JcaSignedPublicKeyAndChallenge;
 
-import com.ironhorsesoftware.jsse.webid.tls.Constants;
+import com.ironhorsesoftware.jsse.webid.Constants;
 
 /**
  * This class is used to construct self-signed WebID X.509 certificates.

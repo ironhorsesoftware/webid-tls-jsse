@@ -39,12 +39,33 @@ import org.apache.jena.rdf.model.Model;
 import org.apache.jena.rdf.model.ModelFactory;
 import org.apache.jena.riot.RDFLanguages;
 
+import com.ironhorsesoftware.jsse.webid.Constants;
+
 /**
  * This implements an {@link X509ExtendedTrustManager} for WebID-TLS.
  *
  * @author Mike Pigott (mpigott@ironhorsesoftware.com)
  */
 public final class WebIdTrustManager extends X509ExtendedTrustManager {
+
+  // This is the parameterized SPARQL query used to verify if the WebID profile contains the requested public key.
+  private static final String WEBID_CERT_SPARQL_QUERY = WebIdTrustManager.createWebIdCertQuery();
+
+  private static String createWebIdCertQuery() {
+    final String nl = System.getProperty("line.separator");
+  
+    StringBuilder queryBuilder = new StringBuilder();
+    queryBuilder.append("PREFIX : <http://www.w3.org/ns/auth/cert#>").append(nl);
+    queryBuilder.append("PREFIX XSD : <http://www.w3.org/2001/XMLSchema#>").append(nl);
+    queryBuilder.append("ASK {").append(nl);
+    queryBuilder.append("   ?webid :key [").append(nl);
+    queryBuilder.append("      :modulus ?mod;").append(nl);
+    queryBuilder.append("      :exponent ?exp;").append(nl);
+    queryBuilder.append("   ] .").append(nl);
+    queryBuilder.append("}");
+  
+    return queryBuilder.toString();
+  }
 
   private X509Certificate[] acceptedIssuers;
   private KeyStore validatedCertificateStore;
@@ -288,7 +309,7 @@ public final class WebIdTrustManager extends X509ExtendedTrustManager {
   }
 
   private void validateClaim(Model profile, WebIdClaim claim) throws CertificateException {
-    final ParameterizedSparqlString query = new ParameterizedSparqlString(Constants.WEBID_CERT_SPARQL_QUERY);
+    final ParameterizedSparqlString query = new ParameterizedSparqlString(WEBID_CERT_SPARQL_QUERY);
     query.setIri("webid", claim.getUri().toString());
     query.setLiteral("mod", claim.getPublicKey().getModulus().toString(), XSDDatatype.XSDpositiveInteger);
     query.setLiteral("exp", claim.getPublicKey().getPublicExponent().toString(), XSDDatatype.XSDpositiveInteger);
