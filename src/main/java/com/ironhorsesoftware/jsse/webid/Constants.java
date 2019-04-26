@@ -30,8 +30,17 @@ public final class Constants {
 
   public static final String SIGNATURE_ALGORITHM_SHA512withRSA = "SHA512withRSA";
 
-  public static long ONE_HOUR_IN_MILLIS = 60L * 60L * 1000L;
+  public static final long ONE_HOUR_IN_MILLIS = 60L * 60L * 1000L;
 
-  // 7305 days in 20 years, approximating 365.25 days per year.
-  public static long TWENTY_YEARS_IN_MILLIS = 7305L * 24L * 60L * 60L * 1000L;
+  public static final long ONE_DAY_IN_MILLIS = 24L * ONE_HOUR_IN_MILLIS;
+
+  /**
+   *  Approximating 365.25 days in a year.
+   */
+  public static final double APPROX_DAYS_IN_YEAR = 365.25;
+
+  /**
+   *  7305 days in 20 years, approximating 365.25 days per year.
+   */
+  public static final long TWENTY_YEARS_IN_MILLIS = 7305L * 24L * 60L * 60L * 1000L;
 }

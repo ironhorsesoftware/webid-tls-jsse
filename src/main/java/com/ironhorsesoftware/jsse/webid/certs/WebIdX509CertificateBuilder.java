@@ -29,6 +29,8 @@ import java.security.interfaces.RSAPublicKey;
 import java.util.Date;
 import java.util.List;
 
+import javax.security.auth.x500.X500Principal;
+
 import org.bouncycastle.asn1.x509.BasicConstraints;
 import org.bouncycastle.asn1.x509.ExtendedKeyUsage;
 import org.bouncycastle.asn1.x509.Extension;
@@ -54,7 +56,7 @@ public final class WebIdX509CertificateBuilder {
   private PrivateKey issuerPrivateKey;
   private SecureRandom rng;
 
-  private String commonName;
+  private X500Principal subject;
   private String emailAddress;
   private RSAPublicKey publicKey;
   private List<URI> webIds;
@@ -66,7 +68,7 @@ public final class WebIdX509CertificateBuilder {
     this.issuerCert = issuerCertificate;
     this.issuerPrivateKey = issuerPrivateKey;
 
-    this.commonName = null;
+    this.subject = null;
     this.emailAddress = null;
     this.publicKey = null;
     this.webIds = new java.util.ArrayList<URI>();
@@ -82,14 +84,15 @@ public final class WebIdX509CertificateBuilder {
       throw new IllegalArgumentException("The common name (\"" + commonName + "\") cannot be blank.");
     }
 
-    this.commonName = commonName;
+    final StringBuilder subjectBuilder = new StringBuilder(commonName.length()+17);
+    subjectBuilder.append("CN=").append(commonName).append(",O=Solid.VIP");
 
+    this.subject = new X500Principal(subjectBuilder.toString());
     return this;
   }
 
   public WebIdX509CertificateBuilder setEmailAddress(String emailAddress) {
     this.emailAddress = emailAddress;
-
     return this;
   }
 
@@ -110,13 +113,11 @@ public final class WebIdX509CertificateBuilder {
 
   public WebIdX509CertificateBuilder addWebId(URI webId) {
     webIds.add(webId);
-
     return this;
   }
 
   public WebIdX509CertificateBuilder clearWebIds() {
     webIds.clear();
-
     return this;
   }
 
@@ -126,7 +127,6 @@ public final class WebIdX509CertificateBuilder {
     }
 
     this.yearsValid = years;
-
     return this;
   }
 
@@ -147,12 +147,12 @@ public final class WebIdX509CertificateBuilder {
 
     final JcaX509v3CertificateBuilder builder =
         new JcaX509v3CertificateBuilder(
-            this.issuerCert,                                  // Issuer
-            BigInteger.valueOf(rng.nextLong()),               // Serial Number
-            new Date(now - Constants.ONE_HOUR_IN_MILLIS),     // Valid Starting
-            new Date(now + Constants.TWENTY_YEARS_IN_MILLIS), // Valid Until
-            this.issuerCert.getSubjectX500Principal(),        // Subject
-            this.publicKey);                                  // Public Key
+            this.issuerCert,                              // Issuer
+            BigInteger.valueOf(rng.nextLong()),           // Serial Number
+            new Date(now - Constants.ONE_HOUR_IN_MILLIS), // Valid Starting
+            new Date(now + calculateMillisValid()),       // Valid Until
+            this.subject,                                 // Subject
+            this.publicKey);                              // Public Key
 
     builder.addExtension(Extension.basicConstraints, false, new BasicConstraints(false));
 
@@ -163,7 +163,7 @@ public final class WebIdX509CertificateBuilder {
 
     builder.addExtension(Extension.extendedKeyUsage, true, new ExtendedKeyUsage(KeyPurposeId.id_kp_clientAuth));
 
-    final JcaContentSignerBuilder signerBuilder = new JcaContentSignerBuilder("SHA512withRSA");
+    final JcaContentSignerBuilder signerBuilder = new JcaContentSignerBuilder(Constants.SIGNATURE_ALGORITHM_SHA512withRSA);
     signerBuilder.setProvider(provider);
 
     final JcaX509CertificateConverter converter = new JcaX509CertificateConverter();
@@ -172,7 +172,7 @@ public final class WebIdX509CertificateBuilder {
   }
 
   public void checkValidity() throws IllegalStateException {
-    if ((commonName == null) || (commonName.isEmpty())) {
+    if (subject == null) {
       throw new IllegalStateException("The common name must be specified.");
     }
 
@@ -194,7 +194,7 @@ public final class WebIdX509CertificateBuilder {
 
     StringBuilder builder = new StringBuilder("WebIdX509CertificateBuilder");
     builder.append(nl).append("\t     Issuer: ").append(issuerCert.getSubjectDN());
-    builder.append(nl).append("\tCommon Name: ").append(commonName);
+    builder.append(nl).append("\t    Subject: ").append(subject);
     builder.append(nl).append("\t      Email: ").append(emailAddress);
     builder.append(nl).append("\tYears Valid: ").append(yearsValid);
 
@@ -211,5 +211,9 @@ public final class WebIdX509CertificateBuilder {
     }
 
     return builder.toString();
+  }
+
+  private long calculateMillisValid() {
+    return ((long) (this.yearsValid * Constants.APPROX_DAYS_IN_YEAR)) * Constants.ONE_DAY_IN_MILLIS;
   }
 }
