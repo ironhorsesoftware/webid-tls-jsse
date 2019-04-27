@@ -30,10 +30,19 @@ public final class Constants {
    */
   public static final X500Principal WEBID_ISSUER = new X500Principal("O={},CN=WebID");
 
+  /**
+   * A constant representing the alias for the cryptographic algorithm "SHA512 with RSA."
+   */
   public static final String SIGNATURE_ALGORITHM_SHA512withRSA = "SHA512withRSA";
 
+  /**
+   * One hour, in milliseconds.
+   */
   public static final long ONE_HOUR_IN_MILLIS = 60L * 60L * 1000L;
 
+  /**
+   * One day, in milliseconds.
+   */
   public static final long ONE_DAY_IN_MILLIS = 24L * ONE_HOUR_IN_MILLIS;
 
   /**
@@ -46,6 +55,13 @@ public final class Constants {
    */
   public static final long TWENTY_YEARS_IN_MILLIS = 7305L * 24L * 60L * 60L * 1000L;
 
+  /**
+   * A constant representing the HTTP URI scheme.
+   */
   public static final String WEBID_URI_SCHEME_HTTP = "http";
+
+  /**
+   * A constant representing the HTTPS URI scheme.
+   */
   public static final String WEBID_URI_SCHEME_HTTPS = "https";
 }
