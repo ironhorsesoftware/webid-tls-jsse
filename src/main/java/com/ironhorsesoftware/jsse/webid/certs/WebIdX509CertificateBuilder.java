@@ -20,7 +20,6 @@ import java.security.InvalidKeyException;
 import java.security.NoSuchAlgorithmException;
 import java.security.NoSuchProviderException;
 import java.security.PrivateKey;
-import java.security.Provider;
 import java.security.PublicKey;
 import java.security.SecureRandom;
 import java.security.SignatureException;
@@ -56,7 +55,6 @@ import com.ironhorsesoftware.jsse.webid.Constants;
  * @author Mike Pigott (mpigott@ironhorsesoftware.com)
  */
 public final class WebIdX509CertificateBuilder {
-  private Provider provider;
   private X509Certificate issuerCert;
   private PrivateKey issuerPrivateKey;
   private SecureRandom rng;
@@ -67,13 +65,11 @@ public final class WebIdX509CertificateBuilder {
   private List<URI> webIds;
   private int yearsValid;
 
-  WebIdX509CertificateBuilder(X509Certificate issuerCertificate, PrivateKey issuerPrivateKey) {
-    this.provider = new org.bouncycastle.jce.provider.BouncyCastleProvider();
+  WebIdX509CertificateBuilder(X509Certificate issuerCertificate, PrivateKey issuerPrivateKey, SecureRandom rng) {
     this.issuerCert = issuerCertificate;
     this.issuerPrivateKey = issuerPrivateKey;
 
-    this.rng = new SecureRandom();
-    this.rng.setSeed(System.currentTimeMillis());
+    this.rng = rng;
 
     this.subject = null;
     this.emailAddress = null;
@@ -162,8 +158,6 @@ public final class WebIdX509CertificateBuilder {
     if (spkac == null) {
       throw new IllegalArgumentException("The SPKAC cannot be null.");
     }
-
-    spkac.setProvider(provider);
 
     // Verifies the SPKAC.
     final NetscapeCertRequest certRequest =
@@ -277,8 +271,6 @@ public final class WebIdX509CertificateBuilder {
     }
 
     final JcaContentSignerBuilder signerBuilder = new JcaContentSignerBuilder(Constants.SIGNATURE_ALGORITHM_SHA512withRSA);
-    signerBuilder.setProvider(provider);
-
     final JcaX509CertificateConverter converter = new JcaX509CertificateConverter();
 
     return converter.getCertificate(builder.build(signerBuilder.build(issuerPrivateKey)));

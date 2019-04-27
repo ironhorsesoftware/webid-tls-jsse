@@ -21,7 +21,6 @@ import java.security.KeyStore;
 import java.security.KeyStoreException;
 import java.security.NoSuchAlgorithmException;
 import java.security.PrivateKey;
-import java.security.Provider;
 import java.security.PublicKey;
 import java.security.SecureRandom;
 import java.security.UnrecoverableKeyException;
@@ -52,7 +51,6 @@ import com.ironhorsesoftware.jsse.webid.Constants;
 public final class WebIdX509CertificateBuilderFactory {
 
   private SecureRandom rng;
-  private Provider provider;
 
   private X509Certificate webIdRootCertificate;
   private PrivateKey webIdRootPrivateKey;
@@ -60,8 +58,6 @@ public final class WebIdX509CertificateBuilderFactory {
   private WebIdX509CertificateBuilderFactory() {
     rng = new SecureRandom();
     rng.setSeed(System.currentTimeMillis());
-
-    provider = new org.bouncycastle.jce.provider.BouncyCastleProvider();
   }
 
   /**
@@ -80,7 +76,7 @@ public final class WebIdX509CertificateBuilderFactory {
   public WebIdX509CertificateBuilderFactory(PublicKey webIdRootPublicKey, PrivateKey webIdRootPrivateKey) throws OperatorCreationException, CertificateException, CertIOException {
     this();
 
-    this.webIdRootCertificate = createWebIdRootSelfSignedCertificate(provider, rng, webIdRootPublicKey, webIdRootPrivateKey); 
+    this.webIdRootCertificate = createWebIdRootSelfSignedCertificate(rng, webIdRootPublicKey, webIdRootPrivateKey); 
     this.webIdRootPrivateKey = webIdRootPrivateKey;
   }
 
@@ -121,7 +117,7 @@ public final class WebIdX509CertificateBuilderFactory {
     if (certificate.getSubjectX500Principal().equals(Constants.WEBID_ISSUER)) {
       this.webIdRootCertificate = certificate;
     } else {
-      this.webIdRootCertificate = createWebIdRootSelfSignedCertificate(this.provider, this.rng, certificate.getPublicKey(), this.webIdRootPrivateKey);
+      this.webIdRootCertificate = createWebIdRootSelfSignedCertificate(this.rng, certificate.getPublicKey(), this.webIdRootPrivateKey);
     }
   }
 
@@ -162,12 +158,12 @@ public final class WebIdX509CertificateBuilderFactory {
     if (certificate.getSubjectX500Principal().equals(Constants.WEBID_ISSUER)) {
       this.webIdRootCertificate = certificate;
     } else {
-      this.webIdRootCertificate = createWebIdRootSelfSignedCertificate(this.provider, this.rng, certificate.getPublicKey(), this.webIdRootPrivateKey);
+      this.webIdRootCertificate = createWebIdRootSelfSignedCertificate(this.rng, certificate.getPublicKey(), this.webIdRootPrivateKey);
     }
     
   }
 
-  private static X509Certificate createWebIdRootSelfSignedCertificate(Provider provider, SecureRandom rng, PublicKey publicKey, PrivateKey privateKey) throws CertIOException, CertificateException, OperatorCreationException {
+  private static X509Certificate createWebIdRootSelfSignedCertificate(SecureRandom rng, PublicKey publicKey, PrivateKey privateKey) throws CertIOException, CertificateException, OperatorCreationException {
     final long now = System.currentTimeMillis();
 
     final JcaX509v3CertificateBuilder builder =
@@ -183,7 +179,6 @@ public final class WebIdX509CertificateBuilderFactory {
     builder.addExtension(Extension.basicConstraints, false, new BasicConstraints(true));  
 
     final JcaContentSignerBuilder signerBuilder = new JcaContentSignerBuilder(Constants.SIGNATURE_ALGORITHM_SHA512withRSA);
-    signerBuilder.setProvider(provider);
 
     final JcaX509CertificateConverter converter = new JcaX509CertificateConverter();
     return converter.getCertificate(builder.build(signerBuilder.build(privateKey)));
@@ -196,7 +191,7 @@ public final class WebIdX509CertificateBuilderFactory {
    * @return A new instance of <code>WebIdX509CertificateBuilder</code>.
    */
   public WebIdX509CertificateBuilder newCertificateBuilder() {
-    return new WebIdX509CertificateBuilder(webIdRootCertificate, webIdRootPrivateKey);
+    return new WebIdX509CertificateBuilder(webIdRootCertificate, webIdRootPrivateKey, rng);
   }
 
   X509Certificate getWebIdRootCertificate() {
