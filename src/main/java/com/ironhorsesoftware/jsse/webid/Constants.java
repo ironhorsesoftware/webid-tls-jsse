@@ -43,4 +43,7 @@ public final class Constants {
    *  7305 days in 20 years, approximating 365.25 days per year.
    */
   public static final long TWENTY_YEARS_IN_MILLIS = 7305L * 24L * 60L * 60L * 1000L;
+
+  public static final String WEBID_URI_SCHEME_HTTP = "http";
+  public static final String WEBID_URI_SCHEME_HTTPS = "https";
 }

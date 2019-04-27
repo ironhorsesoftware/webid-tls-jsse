@@ -231,7 +231,9 @@ public final class WebIdTrustManager extends X509ExtendedTrustManager {
   }
 
   private HttpURLConnection createWebIdProfileConnection(URI webId) throws CertificateException {
-    if ((webId.getScheme() == null) || (!webId.getScheme().equalsIgnoreCase("http") && !webId.getScheme().equalsIgnoreCase("https"))) {
+    if ((webId.getScheme() == null)
+        || (!webId.getScheme().equalsIgnoreCase(Constants.WEBID_URI_SCHEME_HTTP)
+            && !webId.getScheme().equalsIgnoreCase(Constants.WEBID_URI_SCHEME_HTTPS))) {
       throw new CertificateException("WebIDs can only be validated via HTTP or HTTPS. " + webId.toString() + " cannot be verified.");
     }
 

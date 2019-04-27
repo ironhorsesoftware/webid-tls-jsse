@@ -35,7 +35,6 @@ import org.bouncycastle.asn1.x509.KeyUsage;
 import org.bouncycastle.cert.CertIOException;
 import org.bouncycastle.cert.jcajce.JcaX509CertificateConverter;
 import org.bouncycastle.cert.jcajce.JcaX509v3CertificateBuilder;
-import org.bouncycastle.jce.provider.BouncyCastleProvider;
 import org.bouncycastle.operator.OperatorCreationException;
 import org.bouncycastle.operator.jcajce.JcaContentSignerBuilder;
 
@@ -51,18 +50,29 @@ import com.ironhorsesoftware.jsse.webid.Constants;
  */
 public final class WebIdX509CertificateBuilderFactory {
 
-  private SecureRandom rng = new SecureRandom();
-  private Provider provider = new BouncyCastleProvider();
+  private SecureRandom rng;
+  private Provider provider;
 
   private X509Certificate webIdRootCertificate;
   private PrivateKey webIdRootPrivateKey;
 
+  private WebIdX509CertificateBuilderFactory() {
+    rng = new SecureRandom();
+    rng.setSeed(System.currentTimeMillis());
+
+    provider = new org.bouncycastle.jce.provider.BouncyCastleProvider();
+  }
+
   public WebIdX509CertificateBuilderFactory(PublicKey webIdRootPublicKey, PrivateKey webIdRootPrivateKey) throws OperatorCreationException, CertificateException, CertIOException {
+    this();
+
     this.webIdRootCertificate = createWebIdRootSelfSignedCertificate(provider, rng, webIdRootPublicKey, webIdRootPrivateKey); 
     this.webIdRootPrivateKey = webIdRootPrivateKey;
   }
 
   public WebIdX509CertificateBuilderFactory(X509Certificate certificate, PrivateKey privateKey) throws CertIOException, CertificateException, OperatorCreationException {
+    this();
+
     this.webIdRootPrivateKey = privateKey;
 
     if (certificate.getSubjectDN().equals(Constants.WEBID_ISSUER)) {
@@ -73,6 +83,8 @@ public final class WebIdX509CertificateBuilderFactory {
   }
 
   public WebIdX509CertificateBuilderFactory(KeyStore keyStore, String alias, char[] password) throws UnrecoverableKeyException, KeyStoreException, NoSuchAlgorithmException, CertIOException, CertificateException, OperatorCreationException {
+    this();
+
     final Key key = keyStore.getKey(alias, password);
 
     if ((key == null) || !(key instanceof PrivateKey)) {
