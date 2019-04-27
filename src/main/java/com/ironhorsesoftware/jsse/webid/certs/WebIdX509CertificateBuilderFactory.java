@@ -118,7 +118,7 @@ public final class WebIdX509CertificateBuilderFactory {
 
     this.webIdRootPrivateKey = privateKey;
 
-    if (certificate.getSubjectDN().equals(Constants.WEBID_ISSUER)) {
+    if (certificate.getSubjectX500Principal().equals(Constants.WEBID_ISSUER)) {
       this.webIdRootCertificate = certificate;
     } else {
       this.webIdRootCertificate = createWebIdRootSelfSignedCertificate(this.provider, this.rng, certificate.getPublicKey(), this.webIdRootPrivateKey);
@@ -159,7 +159,7 @@ public final class WebIdX509CertificateBuilderFactory {
     this.webIdRootPrivateKey = (PrivateKey) key;
 
     final X509Certificate certificate = (X509Certificate) cert;
-    if (certificate.getSubjectDN().equals(Constants.WEBID_ISSUER)) {
+    if (certificate.getSubjectX500Principal().equals(Constants.WEBID_ISSUER)) {
       this.webIdRootCertificate = certificate;
     } else {
       this.webIdRootCertificate = createWebIdRootSelfSignedCertificate(this.provider, this.rng, certificate.getPublicKey(), this.webIdRootPrivateKey);
@@ -197,5 +197,13 @@ public final class WebIdX509CertificateBuilderFactory {
    */
   public WebIdX509CertificateBuilder newCertificateBuilder() {
     return new WebIdX509CertificateBuilder(webIdRootCertificate, webIdRootPrivateKey);
+  }
+
+  X509Certificate getWebIdRootCertificate() {
+    return this.webIdRootCertificate;
+  }
+
+  PrivateKey getWebIdRootPrivateKey() {
+    return this.webIdRootPrivateKey;
   }
 }
