@@ -238,12 +238,11 @@ public final class WebIdX509CertificateBuilder {
 
   /**
    * Constructs a new X.509 WebID Self-Signed Certificate from the provided information.
-   * 
    *
-   * @return
+   * @return The X.509 WebID certificate.
    * @throws CertIOException If unable to create the certificate.
-   * @throws OperatorCreationException 
-   * @throws CertificateException 
+   * @throws OperatorCreationException  If unable to create the certificate.
+   * @throws CertificateException If the created certificate is invalid.
    * @throws IllegalStateException if the builder is not correctly configured.
    */
   public X509Certificate build() throws CertIOException, CertificateException, OperatorCreationException {
@@ -285,6 +284,12 @@ public final class WebIdX509CertificateBuilder {
     return converter.getCertificate(builder.build(signerBuilder.build(issuerPrivateKey)));
   }
 
+  /**
+   * Checks the validity of the builder.  If no exception is thrown, the
+   * {@link #build()} function will be able to construct a certificate.
+   *
+   * @throws IllegalStateException If the builder is not in a valid state.
+   */
   public void checkValidity() throws IllegalStateException {
     if (subject == null) {
       throw new IllegalStateException("The common name must be specified.");
@@ -303,6 +308,12 @@ public final class WebIdX509CertificateBuilder {
     }
   }
 
+  /**
+   * Creates a representation of the builder state, as a <code>String</code>.
+   *
+   * @return The builder's state, as a {@link String}.
+   * @see java.lang.Object#toString()
+   */
   public String toString() {
     final String nl = System.getProperty("line.separator");
 

@@ -25,8 +25,10 @@ public final class Constants {
 
   /**
    * This represents the X.500 distinguished name for the issuer of WebID self-signed certificates.
+   * It is of the form <code>O={},CN=WebID</code> per the
+   * <a href="https://www.w3.org/2005/Incubator/webid/spec/tls/">WebID-TLS specification</a>.
    */
-  public static final X500Principal WEBID_ISSUER = new X500Principal("O={}, CN=WebID");
+  public static final X500Principal WEBID_ISSUER = new X500Principal("O={},CN=WebID");
 
   public static final String SIGNATURE_ALGORITHM_SHA512withRSA = "SHA512withRSA";
 
