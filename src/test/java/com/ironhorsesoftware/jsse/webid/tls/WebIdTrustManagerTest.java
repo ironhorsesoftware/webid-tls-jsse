@@ -179,6 +179,6 @@ public class WebIdTrustManagerTest {
 
   @Test
   public void testValidateClaim() {
-    
+    // TODO: Build a model of the correct structure, the corresponding WebIdClaim, and verify they match.
   }
 }
