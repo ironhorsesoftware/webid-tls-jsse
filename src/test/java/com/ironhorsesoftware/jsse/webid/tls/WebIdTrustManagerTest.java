@@ -3,6 +3,7 @@ package com.ironhorsesoftware.jsse.webid.tls;
 import static org.junit.Assert.*;
 
 import java.io.IOException;
+import java.net.HttpURLConnection;
 import java.net.Socket;
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -20,10 +21,9 @@ import java.security.interfaces.RSAPublicKey;
 import javax.net.ssl.SSLEngine;
 import javax.net.ssl.TrustManager;
 
-import org.bouncycastle.cert.CertIOException;
+import org.apache.jena.riot.RDFLanguages;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
 import org.bouncycastle.operator.OperatorCreationException;
-import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
@@ -33,14 +33,9 @@ import com.ironhorsesoftware.jsse.webid.certs.WebIdX509CertificateBuilderFactory
 public class WebIdTrustManagerTest {
 
   private static final String SERVER_AUTH_TYPE = "RSA";
-  private static final char[] KEYSTORE_PASSWORD = "password".toCharArray();
-  private static final String WEBID_URI = "http://localhost:8282/mikepigott#i";
 
   private static WebIdX509CertificateBuilderFactory factory;
   private static KeyPairGenerator keyGen;
-
-  private WebIdX509CertificateBuilder builder;
-  private TrustManagerFactory tmFactory;
 
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
@@ -61,12 +56,6 @@ public class WebIdTrustManagerTest {
 
     factory =
         new WebIdX509CertificateBuilderFactory(keyPair);
-  }
-
-  @Before
-  public void setUp() throws Exception {
-    builder = factory.newCertificateBuilder();
-    tmFactory = new TrustManagerFactory();
   }
 
   @Test
@@ -97,14 +86,25 @@ public class WebIdTrustManagerTest {
 
   @Test
   public void testVerifyCertificateAlreadyInKeyStore() throws CertificateException, OperatorCreationException, URISyntaxException, KeyStoreException, NoSuchAlgorithmException, IOException {
+    final char[] keyStorePassword = "password".toCharArray();
+    final String webIdUri = "http://www.ironhorsesoftware.com/mikepigott#map";
     final KeyPair keyPair = keyGen.generateKeyPair();
-    final X509Certificate webIdCert = buildCertificate((RSAPublicKey) keyPair.getPublic());
+
+    final WebIdX509CertificateBuilder builder = factory.newCertificateBuilder();
+    final TrustManagerFactory tmFactory = new TrustManagerFactory();
+
+    builder.setCommonName("Michael Pigott");
+    builder.setPublicKey((RSAPublicKey) keyPair.getPublic());
+    builder.addWebId(new URI(webIdUri));
+    builder.setYearsValid(1);
+
+    final X509Certificate webIdCert = builder.build();
 
     final X509Certificate[] certificateChain = new X509Certificate[]{ webIdCert, factory.getWebIdRootCertificate() };
 
     final KeyStore keyStore = KeyStore.getInstance(KeyStore.getDefaultType());
-    keyStore.load(null, KEYSTORE_PASSWORD);
-    keyStore.setKeyEntry(WEBID_URI, keyPair.getPrivate(), KEYSTORE_PASSWORD, certificateChain);
+    keyStore.load(null, keyStorePassword);
+    keyStore.setKeyEntry(webIdUri, keyPair.getPrivate(), keyStorePassword, certificateChain);
 
     tmFactory.engineInit(keyStore);
 
@@ -119,14 +119,38 @@ public class WebIdTrustManagerTest {
     trustManager.checkClientTrusted(certificateChain, "RSA");
   }
 
-  private X509Certificate buildCertificate(RSAPublicKey publicKey) throws URISyntaxException, CertIOException, CertificateException, OperatorCreationException {
-    final int yearsValid = 1;
+  private void verifyHttpURLConnectionInvariants(HttpURLConnection conn) {
+    assertTrue(conn.getInstanceFollowRedirects());
 
-    builder.setCommonName("Michael Pigott");
-    builder.setPublicKey(publicKey);
-    builder.addWebId(new URI(WEBID_URI));
-    builder.setYearsValid(yearsValid);
+    final String acceptHeader = String.join(
+        ",",
+        RDFLanguages.TURTLE.getHeaderString(),
+        RDFLanguages.RDFXML.getHeaderString(),
+        RDFLanguages.NTRIPLES.getHeaderString(),
+        RDFLanguages.JSONLD.getHeaderString());
 
-    return builder.build();
+    assertEquals(acceptHeader, conn.getRequestProperty("Accept"));
+  }
+
+  @Test
+  public void testCreateWebIdProfileConnectionWithHashUri() throws CertificateException, URISyntaxException {
+    final String webIdUri = "http://www.ironhorsesoftware.com/mikepigott#i";
+    final WebIdTrustManager trustManager = new WebIdTrustManager();
+    final HttpURLConnection conn = trustManager.createWebIdProfileConnection(new URI(webIdUri));
+
+    assertEquals(webIdUri.split("#")[0], conn.getURL().toExternalForm());
+
+    verifyHttpURLConnectionInvariants(conn);
+  }
+
+  @Test
+  public void testCreateWebIdProfileConnectionWithRedirectUri() throws CertificateException, URISyntaxException {
+    final String webIdUri = "http://www.ironhorsesoftware.com/mikepigott";
+    final WebIdTrustManager trustManager = new WebIdTrustManager();
+    final HttpURLConnection conn = trustManager.createWebIdProfileConnection(new URI(webIdUri));
+
+    assertEquals(webIdUri, conn.getURL().toExternalForm());
+
+    verifyHttpURLConnectionInvariants(conn);
   }
 }

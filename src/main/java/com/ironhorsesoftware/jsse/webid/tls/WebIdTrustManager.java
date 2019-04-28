@@ -230,7 +230,7 @@ public final class WebIdTrustManager extends X509ExtendedTrustManager {
     return webIdList;
   }
 
-  private HttpURLConnection createWebIdProfileConnection(URI webId) throws CertificateException {
+  HttpURLConnection createWebIdProfileConnection(URI webId) throws CertificateException {
     if ((webId.getScheme() == null)
         || (!webId.getScheme().equalsIgnoreCase(Constants.WEBID_URI_SCHEME_HTTP)
             && !webId.getScheme().equalsIgnoreCase(Constants.WEBID_URI_SCHEME_HTTPS))) {
@@ -293,7 +293,7 @@ public final class WebIdTrustManager extends X509ExtendedTrustManager {
     return profile;
   }
 
-  private String getJenaRdfEncodingType(String contentType) {
+  String getJenaRdfEncodingType(String contentType) {
     if (contentType.equals(RDFLanguages.TURTLE.getHeaderString())) {
       return RDFLanguages.TURTLE.getName();
 
@@ -310,7 +310,7 @@ public final class WebIdTrustManager extends X509ExtendedTrustManager {
     throw new IllegalArgumentException("Unrecognized content type " + contentType);
   }
 
-  private void validateClaim(Model profile, WebIdClaim claim) throws CertificateException {
+  void validateClaim(Model profile, WebIdClaim claim) throws CertificateException {
     final ParameterizedSparqlString query = new ParameterizedSparqlString(WEBID_CERT_SPARQL_QUERY);
     query.setIri("webid", claim.getUri().toString());
     query.setLiteral("mod", claim.getPublicKey().getModulus().toString(), XSDDatatype.XSDpositiveInteger);
