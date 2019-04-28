@@ -195,7 +195,14 @@ public final class WebIdX509CertificateBuilderFactory {
    * @return A new instance of <code>WebIdX509CertificateBuilder</code>.
    */
   public WebIdX509CertificateBuilder newCertificateBuilder() {
-    return new WebIdX509CertificateBuilder(webIdRootCertificate, webIdRootPrivateKey, rng);
+    WebIdX509CertificateBuilder builder =
+        new WebIdX509CertificateBuilder(webIdRootCertificate, webIdRootPrivateKey, rng);
+
+    if (!serverDnsNames.isEmpty()) {
+      builder.setServerDnsNames(serverDnsNames.toArray(new String[0]));
+    }
+
+    return builder;
   }
 
   /**
@@ -205,25 +212,28 @@ public final class WebIdX509CertificateBuilderFactory {
    * use to complete the TLS handshake.
    *
    * @param dnsName The server DNS name to add.
+   * @return This factory, for chaining.
    * @throws IllegalArgumentException if the DNS name is null or empty.
    * @see X509Certificate#getSubjectAlternativeNames()
    */
-  public void addServerDnsName(String dnsName) {
+  public WebIdX509CertificateBuilderFactory addServerDnsName(String dnsName) {
     if ((dnsName == null) || (dnsName.trim().isEmpty())) {
       throw new IllegalArgumentException("The array of DNS names cannot be null or empty.");
     }
 
     this.serverDnsNames.add(dnsName.trim());
+    return this;
   }
 
   /**
    * Adds the {@link java.util.Collection} of DNS names to be included on the generated certificates.
    *
    * @param dnsNames The list of DNS names to add.
+   * @return This factory, for chaining.
    * @throws IllegalArgumentException if the collection of DNS names is <code>null</code>, or any individual DNS name fails validation.
    * @see #addServerDnsName(String)
    */
-  public void addServerDnsNames(java.util.Collection<String> dnsNames) {
+  public WebIdX509CertificateBuilderFactory addServerDnsNames(java.util.Collection<String> dnsNames) {
     if (dnsNames == null) {
       throw new IllegalArgumentException("The collection of DNS names cannot be null.");
     }
@@ -231,16 +241,19 @@ public final class WebIdX509CertificateBuilderFactory {
     for (String dnsName : dnsNames) {
       addServerDnsName(dnsName);
     }
+
+    return this;
   }
 
   /**
    * Adds the array of DNS names to be included on the generated certificates.
    *
    * @param dnsNames The list of DNS names to add.
+   * @return This factory, for chaining.
    * @throws IllegalArgumentException if the array of DNS names is <code>null</code>, or any individual DNS name fails validation.
    * @see #addServerDnsName(String)
    */
-  public void addServerDnsNames(String[] dnsNames) {
+  public WebIdX509CertificateBuilderFactory addServerDnsNames(String[] dnsNames) {
     if (dnsNames == null) {
       throw new IllegalArgumentException("The array of DNS names cannot be null.");
     }
@@ -248,10 +261,29 @@ public final class WebIdX509CertificateBuilderFactory {
     for (String dnsName : dnsNames) {
       addServerDnsName(dnsName);
     }
+
+    return this;
   }
 
-  // Provided for testing purposes.
-  X509Certificate getWebIdRootCertificate() {
+  /**
+   * Clears the list of server DNS names.  Future {@link WebIdX509CertificateBuilder}s will
+   * not set any DNS records in the Subject Alternative Names section of their certificates.
+   *
+   * @return This factory, for chaining.
+   */
+  public WebIdX509CertificateBuilderFactory clearServerDnsNames() {
+    this.serverDnsNames.clear();
+    return this;
+  }
+
+  /**
+   * The root certificate that will be used to sign all certificates created by the builders.
+   * This method is provided to allow users to store the root certificate in a {@link KeyStore}
+   * for later use.
+   *
+   * @return The root WebID certificate.
+   */
+  public X509Certificate getWebIdRootCertificate() {
     return this.webIdRootCertificate;
   }
 

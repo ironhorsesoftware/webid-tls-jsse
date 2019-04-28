@@ -323,7 +323,14 @@ public final class WebIdX509CertificateBuilder {
       builder.append(nl).append("\t\t Exponent: ").append(publicKey.getPublicExponent());
     }
 
-    return builder.toString();
+    builder.append(nl).append("\t  DNS Names: ");
+    if (serverDnsNames != null) {
+      for (String dnsName : serverDnsNames) {
+        builder.append(nl).append("\t").append(dnsName);
+      }
+    }
+
+    return builder.append(nl).toString();
   }
 
   private long calculateMillisValid() {

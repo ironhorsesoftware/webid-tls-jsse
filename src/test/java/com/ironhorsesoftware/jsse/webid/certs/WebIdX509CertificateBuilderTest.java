@@ -190,6 +190,11 @@ public class WebIdX509CertificateBuilderTest {
     builder.setYearsValid(21);
   }
 
+  @Test(expected = IllegalArgumentException.class)
+  public void testSetEmptyEmail() {
+    builder.setEmailAddress("  ");
+  }
+
   @Test(expected = IllegalStateException.class)
   public void testEmptyBuilder() {
     builder.checkValidity();
@@ -256,7 +261,6 @@ public class WebIdX509CertificateBuilderTest {
   private void verifyCertificateInvariants(X509Certificate certificate) throws InvalidKeyException, CertificateException, NoSuchAlgorithmException, NoSuchProviderException, SignatureException {
     certificate.checkValidity();
     certificate.checkValidity(new Date(System.currentTimeMillis() - FIFTY_NINE_MINUTES_AGO_IN_MILLIS));
-    certificate.verify(factory.getWebIdRootCertificate().getPublicKey());
     assertEquals(Constants.WEBID_ISSUER, certificate.getIssuerX500Principal());
 
     final boolean[] keyUsage = certificate.getKeyUsage();
@@ -295,6 +299,7 @@ public class WebIdX509CertificateBuilderTest {
     builder.setYearsValid(yearsValid);
 
     final X509Certificate certificate = builder.build();
+    certificate.verify(factory.getWebIdRootCertificate().getPublicKey());
 
     assertEquals(subject, certificate.getSubjectX500Principal());
     assertEquals(publicKey, certificate.getPublicKey());
@@ -330,6 +335,7 @@ public class WebIdX509CertificateBuilderTest {
     builder.setYearsValid(yearsValid);
 
     final X509Certificate certificate = builder.build();
+    certificate.verify(factory.getWebIdRootCertificate().getPublicKey());
 
     assertEquals(subject, certificate.getSubjectX500Principal());
     assertEquals(spkac.getPublicKey(), certificate.getPublicKey());
@@ -346,6 +352,50 @@ public class WebIdX509CertificateBuilderTest {
     }
 
     certificate.checkValidity(new Date(System.currentTimeMillis() + approximateValidUntil(yearsValid)));
+
+    verifyCertificateInvariants(certificate);
+  }
+
+  @Test
+  public void testBuildCertificateWithDnsNames() throws OperatorCreationException, CertificateException, CertIOException, URISyntaxException, InvalidKeyException, NoSuchAlgorithmException, NoSuchProviderException, SignatureException {
+    List<String> serverDnsNames = new java.util.ArrayList<>();
+    serverDnsNames.add("webid");
+    serverDnsNames.add("webid.ironhorsesoftware.com");
+
+    final WebIdX509CertificateBuilderFactory factory =
+        new WebIdX509CertificateBuilderFactory(keyGen.generateKeyPair());
+    factory.addServerDnsNames(serverDnsNames);
+
+    final WebIdX509CertificateBuilder builder = factory.newCertificateBuilder();
+
+    final X500Principal subject = new X500Principal("CN=" + VALID_CN + ",O=Solid.VIP");
+    final RSAPublicKey publicKey = (RSAPublicKey) keyGen.generateKeyPair().getPublic();
+
+    builder.setCommonName(VALID_CN);
+    builder.setEmailAddress(null);
+    builder.setPublicKey(publicKey);
+    builder.addWebId(new URI(VALID_URI));
+
+    final X509Certificate certificate = builder.build();
+    certificate.verify(factory.getWebIdRootCertificate().getPublicKey());
+
+    assertEquals(subject, certificate.getSubjectX500Principal());
+    assertEquals(publicKey, certificate.getPublicKey());
+
+    final Collection<List<?>> subjectAlternateNames = certificate.getSubjectAlternativeNames();
+    assertEquals(serverDnsNames.size() + 2, subjectAlternateNames.size());
+
+    for (List<?> san : subjectAlternateNames) {
+      final Integer type = (Integer) san.get(0);
+      switch (type.intValue()) {
+        case 2: assertTrue(serverDnsNames.contains(san.get(1)));         break; // dNSName
+        case 4:  assertEquals("O=Solid.VIP,CN=" + VALID_CN, san.get(1)); break; // directoryName 
+        case 6:  assertEquals(VALID_URI, san.get(1));                    break; // uniformResourceIdentifier
+        default: fail("Unrecognized subject alternative name of type " + type + " and value " + san.get(1));
+      }
+    }
+
+    certificate.checkValidity(new Date(System.currentTimeMillis() + approximateValidUntil(5))); // 5 is the default.
 
     verifyCertificateInvariants(certificate);
   }

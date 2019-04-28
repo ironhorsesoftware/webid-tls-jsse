@@ -21,9 +21,12 @@ import java.security.KeyPairGenerator;
 import java.security.KeyStore;
 import java.security.SecureRandom;
 import java.security.Security;
+import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
 
+import org.bouncycastle.cert.CertIOException;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
+import org.bouncycastle.operator.OperatorCreationException;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -134,5 +137,49 @@ public class WebIdX509CertificateBuilderFactoryTest {
 
     assertEquals(this.keyPair.getPrivate(), factory.getWebIdRootPrivateKey());
     assertEquals(certificate, factory.getWebIdRootCertificate());
+  }
+
+  @Test(expected = IllegalArgumentException.class)
+  public void testAddNullServerDnsName() throws OperatorCreationException, CertificateException, CertIOException {
+    final WebIdX509CertificateBuilderFactory factory =
+        new WebIdX509CertificateBuilderFactory(this.keyPair);
+    factory.addServerDnsName(null);
+  }
+
+  @Test(expected = IllegalArgumentException.class)
+  public void testAddEmptyServerDnsName() throws OperatorCreationException, CertificateException, CertIOException {
+    final WebIdX509CertificateBuilderFactory factory =
+        new WebIdX509CertificateBuilderFactory(this.keyPair);
+    factory.addServerDnsName("   ");
+  } 
+
+  @Test(expected = IllegalArgumentException.class)
+  public void testAddNullServerDnsNameCollection() throws OperatorCreationException, CertificateException, CertIOException {
+    final WebIdX509CertificateBuilderFactory factory =
+        new WebIdX509CertificateBuilderFactory(this.keyPair);
+    factory.addServerDnsNames((java.util.Collection<String>) null);
+  }
+
+  @Test(expected = IllegalArgumentException.class)
+  public void testAddNullServerDnsNameArray() throws OperatorCreationException, CertificateException, CertIOException {
+    final WebIdX509CertificateBuilderFactory factory =
+        new WebIdX509CertificateBuilderFactory(this.keyPair);
+    factory.addServerDnsNames((String[]) null);
+  }
+
+  @Test(expected = IllegalArgumentException.class)
+  public void testAddInvalidDnsNameInCollection() throws OperatorCreationException, CertificateException, CertIOException {
+    final WebIdX509CertificateBuilderFactory factory =
+        new WebIdX509CertificateBuilderFactory(this.keyPair);
+    java.util.ArrayList<String> dnsNames = new java.util.ArrayList<>();
+    dnsNames.add(null);
+    factory.addServerDnsNames(dnsNames);
+  }
+
+  @Test(expected = IllegalArgumentException.class)
+  public void testAddInvalidDnsNameInArray() throws OperatorCreationException, CertificateException, CertIOException {
+    final WebIdX509CertificateBuilderFactory factory =
+        new WebIdX509CertificateBuilderFactory(this.keyPair);
+    factory.addServerDnsNames(new String[] {"   "});
   }
 }
