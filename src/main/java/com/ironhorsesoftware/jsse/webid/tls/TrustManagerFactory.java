@@ -27,7 +27,7 @@ import javax.net.ssl.TrustManagerFactorySpi;
  * 
  * @author Mike Pigott (mpigott@ironhorsesoftware.com)
  */
-public final class TrustManagerFactory extends TrustManagerFactorySpi {
+public class TrustManagerFactory extends TrustManagerFactorySpi {
 
   private KeyStore validatedCertificateStore;
 
@@ -36,7 +36,7 @@ public final class TrustManagerFactory extends TrustManagerFactorySpi {
   }
 
   /**
-   * 
+   * Constructs a single {@link WebIdTrustManager} and returns it in the array.
    * @see javax.net.ssl.TrustManagerFactorySpi#engineGetTrustManagers()
    */
   @Override
@@ -54,7 +54,8 @@ public final class TrustManagerFactory extends TrustManagerFactorySpi {
   }
 
   /**
-   * 
+   * Throws an {@link InvalidAlgorithmParameterException} as this is not supported.
+   * @throws InvalidAlgorithmParameterException as it is not supported.
    * @see javax.net.ssl.TrustManagerFactorySpi#engineInit(javax.net.ssl.ManagerFactoryParameters)
    */
   @Override
