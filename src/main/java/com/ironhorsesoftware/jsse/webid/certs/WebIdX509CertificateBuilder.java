@@ -26,6 +26,7 @@ import java.security.SecureRandom;
 import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
 import java.security.interfaces.RSAPublicKey;
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 
@@ -35,6 +36,7 @@ import org.bouncycastle.asn1.x509.BasicConstraints;
 import org.bouncycastle.asn1.x509.ExtendedKeyUsage;
 import org.bouncycastle.asn1.x509.Extension;
 import org.bouncycastle.asn1.x509.GeneralName;
+import org.bouncycastle.asn1.x509.GeneralNames;
 import org.bouncycastle.asn1.x509.KeyPurposeId;
 import org.bouncycastle.asn1.x509.KeyUsage;
 import org.bouncycastle.cert.CertIOException;
@@ -252,20 +254,18 @@ public final class WebIdX509CertificateBuilder {
 
     builder.addExtension(Extension.basicConstraints, false, new BasicConstraints(false));
 
-    builder.addExtension(Extension.keyUsage, true, new KeyUsage(KeyUsage.digitalSignature));
-    builder.addExtension(Extension.keyUsage, true, new KeyUsage(KeyUsage.nonRepudiation));
-    builder.addExtension(Extension.keyUsage, true, new KeyUsage(KeyUsage.keyEncipherment));
-    builder.addExtension(Extension.keyUsage, true, new KeyUsage(KeyUsage.keyAgreement));
-
+    builder.addExtension(Extension.keyUsage, true, new KeyUsage(KeyUsage.digitalSignature | KeyUsage.nonRepudiation | KeyUsage.keyEncipherment | KeyUsage.keyAgreement));
     builder.addExtension(Extension.extendedKeyUsage, true, new ExtendedKeyUsage(KeyPurposeId.id_kp_clientAuth));
 
+    // Builds the Subject Alternative Names.
+    final ArrayList<GeneralName> subjectAlternativeNames = new ArrayList<GeneralName>();
     if (this.emailAddress != null) {
-      builder.addExtension(Extension.subjectAlternativeName, false, new GeneralName(GeneralName.rfc822Name, this.emailAddress));
+      subjectAlternativeNames.add(new GeneralName(GeneralName.rfc822Name, this.emailAddress));
     }
-
     for (URI webId : webIds) {
-      builder.addExtension(Extension.subjectAlternativeName, false, new GeneralName(GeneralName.uniformResourceIdentifier, webId.toString()));
+      subjectAlternativeNames.add(new GeneralName(GeneralName.uniformResourceIdentifier, webId.toString()));
     }
+    builder.addExtension(Extension.subjectAlternativeName, false, new GeneralNames(subjectAlternativeNames.toArray(new GeneralName[0])));
 
     final JcaContentSignerBuilder signerBuilder = new JcaContentSignerBuilder(Constants.SIGNATURE_ALGORITHM_SHA512withRSA);
     final JcaX509CertificateConverter converter = new JcaX509CertificateConverter();
