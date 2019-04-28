@@ -17,6 +17,8 @@ package com.ironhorsesoftware.jsse.webid.certs;
 import static org.junit.Assert.*;
 
 import java.io.IOException;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.security.InvalidKeyException;
 import java.security.KeyPair;
 import java.security.KeyPairGenerator;
@@ -123,12 +125,11 @@ public class WebIdX509CertificateBuilderTest {
 
     final NetscapeCertRequest ncr = new NetscapeCertRequest(challenge, algId, keyPair.getPublic());
     ncr.sign(keyPair.getPrivate());
-    ncr.verify(challenge);
+    assertTrue(ncr.verify(challenge));
 
     final JcaSignedPublicKeyAndChallenge spkac = new JcaSignedPublicKeyAndChallenge(ncr.toASN1Primitive().getEncoded());
 
     assertEquals(challenge, spkac.getChallenge());
-    assertEquals(sigAlgOid, spkac.getSubjectPublicKeyInfo().getAlgorithm().getAlgorithm().getId());
     assertEquals(keyPair.getPublic(), spkac.getPublicKey());
 
     return spkac;
@@ -146,4 +147,63 @@ public class WebIdX509CertificateBuilderTest {
     final JcaSignedPublicKeyAndChallenge spkac = buildSPKAC("ED448", 448, "1.3.101.113", challenge);
     builder.setPublicKey(spkac, challenge);
   }
+
+  @Test(expected = IllegalArgumentException.class)
+  public void testAddNullWebId() {
+    builder.addWebId(null);
+  }
+
+  @Test(expected = IllegalArgumentException.class)
+  public void testAddWebIdWrongScheme() throws URISyntaxException {
+    builder.addWebId(new URI("file:///tmp/profile.jsonld"));
+  }
+
+  @Test(expected = IllegalArgumentException.class)
+  public void testSetNegativeValidYears() {
+    builder.setYearsValid(-1);
+  }
+
+  @Test(expected = IllegalArgumentException.class)
+  public void testSeZeroValidYears() {
+    builder.setYearsValid(0);
+  }
+
+  @Test(expected = IllegalArgumentException.class)
+  public void testSetValidYearsMoreThan20() {
+    builder.setYearsValid(21);
+  }
+
+  @Test(expected = IllegalStateException.class)
+  public void testEmptyBuilder() {
+    builder.checkValidity();
+  }
+
+  @Test(expected = IllegalStateException.class)
+  public void testSetOnlySubject() {
+    builder.setCommonName("CN=Michael Pigott,O=Solid.VIP");
+    builder.checkValidity();
+  }
+
+  @Test(expected = IllegalStateException.class)
+  public void testSetOnlyRSAPublicKey() {
+    final RSAPublicKey publicKey = (RSAPublicKey) keyGen.generateKeyPair().getPublic();
+    builder.setPublicKey(publicKey);
+    builder.checkValidity();
+  }
+
+  @Test(expected = IllegalStateException.class)
+  public void testSetOnlySPKAC() throws InvalidKeyException, NoSuchAlgorithmException, InvalidKeySpecException, NoSuchProviderException, SignatureException, IOException, OperatorCreationException {
+    final String challenge = "I challenge you to a duel!";
+    final JcaSignedPublicKeyAndChallenge spkac = buildSPKAC("RSA", 2048, "1.2.840.113549.1.1.10", challenge);
+    builder.setPublicKey(spkac, challenge);
+    builder.checkValidity();
+  }
+
+  @Test(expected = IllegalStateException.class)
+  public void testSetOnlyWebId() throws URISyntaxException {
+    builder.addWebId(new URI("https://www.ironhorsesoftware.com/profile#me"));
+    builder.checkValidity();
+  }
+
+  
 }
