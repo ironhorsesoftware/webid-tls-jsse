@@ -29,15 +29,11 @@ import java.security.interfaces.RSAPublicKey;
 import java.security.spec.InvalidKeySpecException;
 
 import org.bouncycastle.asn1.ASN1ObjectIdentifier;
-import org.bouncycastle.asn1.ASN1Primitive;
-import org.bouncycastle.asn1.mozilla.SignedPublicKeyAndChallenge;
-import org.bouncycastle.asn1.pkcs.PKCSObjectIdentifiers;
 import org.bouncycastle.asn1.x509.AlgorithmIdentifier;
 import org.bouncycastle.jce.netscape.NetscapeCertRequest;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
 import org.bouncycastle.mozilla.jcajce.JcaSignedPublicKeyAndChallenge;
 import org.bouncycastle.operator.OperatorCreationException;
-import org.bouncycastle.operator.jcajce.JcaContentVerifierProviderBuilder;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -114,18 +110,14 @@ public class WebIdX509CertificateBuilderTest {
 
   @Test(expected = IllegalArgumentException.class)
   public void testSetNullSPKAC() throws InvalidKeyException, OperatorCreationException, NoSuchAlgorithmException, NoSuchProviderException, IOException {
-    builder.setPublicKey((JcaSignedPublicKeyAndChallenge) null, "<CHALLENGE>");
+    builder.setPublicKey(null, null);
   }
 
-  @Test(expected = InvalidKeyException.class)
-  public void testSetECDSAKeySPKAC() throws NoSuchAlgorithmException, InvalidKeySpecException, NoSuchProviderException, IOException, InvalidKeyException, SignatureException, OperatorCreationException {
-    final String oid = "1.3.101.113"; // ED448
-    final String challenge = "Hello";
+  private JcaSignedPublicKeyAndChallenge buildSPKAC(String keyPairGenAlg, int keySize, String sigAlgOid, String challenge) throws NoSuchAlgorithmException, InvalidKeySpecException, NoSuchProviderException, IOException, InvalidKeyException, SignatureException {
+    final AlgorithmIdentifier algId = new AlgorithmIdentifier(new ASN1ObjectIdentifier(sigAlgOid));
 
-    final AlgorithmIdentifier algId = new AlgorithmIdentifier(new ASN1ObjectIdentifier(oid));
-
-    final KeyPairGenerator keyGen = KeyPairGenerator.getInstance("ED448");
-    keyGen.initialize(448);
+    final KeyPairGenerator keyGen = KeyPairGenerator.getInstance(keyPairGenAlg);
+    keyGen.initialize(keySize);
 
     final KeyPair keyPair = keyGen.genKeyPair();
 
@@ -136,9 +128,22 @@ public class WebIdX509CertificateBuilderTest {
     final JcaSignedPublicKeyAndChallenge spkac = new JcaSignedPublicKeyAndChallenge(ncr.toASN1Primitive().getEncoded());
 
     assertEquals(challenge, spkac.getChallenge());
-    assertEquals(oid, spkac.getSubjectPublicKeyInfo().getAlgorithm().getAlgorithm().getId());
+    assertEquals(sigAlgOid, spkac.getSubjectPublicKeyInfo().getAlgorithm().getAlgorithm().getId());
     assertEquals(keyPair.getPublic(), spkac.getPublicKey());
 
+    return spkac;
+  }
+
+  @Test(expected = IllegalArgumentException.class)
+  public void testSetSPKACWithWrongChallenge() throws NoSuchAlgorithmException, InvalidKeySpecException, NoSuchProviderException, InvalidKeyException, SignatureException, OperatorCreationException, IOException {
+    final JcaSignedPublicKeyAndChallenge spkac = buildSPKAC("ED448", 448, "1.3.101.113", "Hello");
+    builder.setPublicKey(spkac, "<CHALLENGE>");
+  }
+
+  @Test(expected = InvalidKeyException.class)
+  public void testSetED448KeySPKAC() throws NoSuchAlgorithmException, InvalidKeySpecException, NoSuchProviderException, IOException, InvalidKeyException, SignatureException, OperatorCreationException {
+    final String challenge = "Hello";
+    final JcaSignedPublicKeyAndChallenge spkac = buildSPKAC("ED448", 448, "1.3.101.113", challenge);
     builder.setPublicKey(spkac, challenge);
   }
 }
