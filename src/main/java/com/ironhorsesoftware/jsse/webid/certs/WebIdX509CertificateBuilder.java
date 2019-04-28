@@ -59,6 +59,8 @@ public final class WebIdX509CertificateBuilder {
   private PrivateKey issuerPrivateKey;
   private SecureRandom rng;
 
+  private String[] serverDnsNames;
+
   private X500Principal subject;
   private String emailAddress;
   private RSAPublicKey publicKey;
@@ -71,11 +73,17 @@ public final class WebIdX509CertificateBuilder {
 
     this.rng = rng;
 
+    this.serverDnsNames = null;
+
     this.subject = null;
     this.emailAddress = null;
     this.publicKey = null;
     this.webIds = new java.util.ArrayList<URI>();
     this.yearsValid = 5;
+  }
+
+  void setServerDnsNames(String[] dnsNames) {
+    this.serverDnsNames = dnsNames;
   }
 
   /**
@@ -256,16 +264,7 @@ public final class WebIdX509CertificateBuilder {
 
     builder.addExtension(Extension.keyUsage, true, new KeyUsage(KeyUsage.digitalSignature | KeyUsage.nonRepudiation | KeyUsage.keyEncipherment | KeyUsage.keyAgreement));
     builder.addExtension(Extension.extendedKeyUsage, true, new ExtendedKeyUsage(KeyPurposeId.id_kp_clientAuth));
-
-    // Builds the Subject Alternative Names.
-    final ArrayList<GeneralName> subjectAlternativeNames = new ArrayList<GeneralName>();
-    if (this.emailAddress != null) {
-      subjectAlternativeNames.add(new GeneralName(GeneralName.rfc822Name, this.emailAddress));
-    }
-    for (URI webId : webIds) {
-      subjectAlternativeNames.add(new GeneralName(GeneralName.uniformResourceIdentifier, webId.toString()));
-    }
-    builder.addExtension(Extension.subjectAlternativeName, false, new GeneralNames(subjectAlternativeNames.toArray(new GeneralName[0])));
+    builder.addExtension(Extension.subjectAlternativeName, false, buildSubjectAlternativeNames());
 
     final JcaContentSignerBuilder signerBuilder = new JcaContentSignerBuilder(Constants.SIGNATURE_ALGORITHM_SHA512withRSA);
     final JcaX509CertificateConverter converter = new JcaX509CertificateConverter();
@@ -329,5 +328,27 @@ public final class WebIdX509CertificateBuilder {
 
   private long calculateMillisValid() {
     return ((long) (this.yearsValid * Constants.APPROX_DAYS_IN_YEAR)) * Constants.ONE_DAY_IN_MILLIS;
+  }
+
+  private GeneralNames buildSubjectAlternativeNames() {
+    final ArrayList<GeneralName> subjectAlternativeNames = new ArrayList<GeneralName>();
+
+    if (this.emailAddress != null) {
+      subjectAlternativeNames.add(new GeneralName(GeneralName.rfc822Name, this.emailAddress));
+    }
+
+    for (URI webId : webIds) {
+      subjectAlternativeNames.add(new GeneralName(GeneralName.uniformResourceIdentifier, webId.toString()));
+    }
+
+    if ((this.serverDnsNames != null) && (this.serverDnsNames.length > 0)) {
+      subjectAlternativeNames.add(new GeneralName(GeneralName.directoryName, subject.getName()));
+
+      for (String dnsName : this.serverDnsNames) {
+        subjectAlternativeNames.add(new GeneralName(GeneralName.dNSName, dnsName));
+      }
+    }
+
+    return new GeneralNames(subjectAlternativeNames.toArray(new GeneralName[0]));
   }
 }
