@@ -14,6 +14,7 @@
  */
 package com.ironhorsesoftware.jsse.webid.certs;
 
+import java.io.IOException;
 import java.math.BigInteger;
 import java.net.URI;
 import java.security.InvalidKeyException;
@@ -22,12 +23,9 @@ import java.security.NoSuchProviderException;
 import java.security.PrivateKey;
 import java.security.PublicKey;
 import java.security.SecureRandom;
-import java.security.SignatureException;
 import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
 import java.security.interfaces.RSAPublicKey;
-import java.security.spec.InvalidKeySpecException;
-import java.util.Base64;
 import java.util.Date;
 import java.util.List;
 
@@ -42,10 +40,10 @@ import org.bouncycastle.asn1.x509.KeyUsage;
 import org.bouncycastle.cert.CertIOException;
 import org.bouncycastle.cert.jcajce.JcaX509CertificateConverter;
 import org.bouncycastle.cert.jcajce.JcaX509v3CertificateBuilder;
-import org.bouncycastle.jce.netscape.NetscapeCertRequest;
 import org.bouncycastle.mozilla.jcajce.JcaSignedPublicKeyAndChallenge;
 import org.bouncycastle.operator.OperatorCreationException;
 import org.bouncycastle.operator.jcajce.JcaContentSignerBuilder;
+import org.bouncycastle.operator.jcajce.JcaContentVerifierProviderBuilder;
 
 import com.ironhorsesoftware.jsse.webid.Constants;
 
@@ -145,28 +143,27 @@ public final class WebIdX509CertificateBuilder {
    * by the <code>keygen</code> element on the HTML form.  The key must be generated
    * using RSA, and must also pass validation.
    *
+   *
    * @param spkac The SPKAC to verify, and use the {@link RSAPublicKey} of.
+   * @param challenge The challenge to use when checking the validity of the SPKAC.
    * @return This builder, for chaining.
-   * @throws InvalidKeyException If the key is not valid.
-   * @throws NoSuchAlgorithmException If the algorithm is not recognized.
-   * @throws NoSuchProviderException If the SPKAC's provider is not recognized.
-   * @throws InvalidKeySpecException If the key specification is invalid.
-   * @throws SignatureException If the signature could not be verified.
-   * @throws IllegalArgumentException if <code>spkac</code> is <code>null</code> or does not represent an RSA Public Key.
+   * @throws InvalidKeyException
+   * @throws OperatorCreationException
+   * @throws NoSuchAlgorithmException
+   * @throws NoSuchProviderException
+   * @throws IllegalArgumentException
+   * @throws IOException
    */
-  public WebIdX509CertificateBuilder setPublicKey(JcaSignedPublicKeyAndChallenge spkac) throws InvalidKeyException, NoSuchAlgorithmException, NoSuchProviderException, InvalidKeySpecException, SignatureException {
+  public WebIdX509CertificateBuilder setPublicKey(JcaSignedPublicKeyAndChallenge spkac, String challenge) throws InvalidKeyException, OperatorCreationException, NoSuchAlgorithmException, NoSuchProviderException, IOException {
     if (spkac == null) {
       throw new IllegalArgumentException("The SPKAC cannot be null.");
+
+    } else if ((challenge != null) && !spkac.getChallenge().equals(challenge)) {
+      throw new IllegalArgumentException("The SPKAC key's challenge does not match.");
     }
 
     // Verifies the SPKAC.
-    final NetscapeCertRequest certRequest =
-        new NetscapeCertRequest(spkac.getChallenge(), spkac.getSubjectPublicKeyInfo().getAlgorithm(), spkac.getPublicKey());
-
-    final byte[] challenge = new byte[1024];
-    rng.nextBytes(challenge);
-
-    if (!certRequest.verify(Base64.getEncoder().encodeToString(challenge))) {
+    if (!spkac.isSignatureValid(new JcaContentVerifierProviderBuilder().build(spkac.getPublicKey()))) {
       throw new IllegalArgumentException("The SPKAC public key could not be verified.");
     }
 

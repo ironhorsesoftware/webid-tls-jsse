@@ -15,3 +15,5 @@ buildNumber.properties
 .project
 .settings/
 .gitignore~
+
+src/main/java/com/ironhorsesoftware/Main.java

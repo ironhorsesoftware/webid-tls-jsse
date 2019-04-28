@@ -16,46 +16,57 @@ package com.ironhorsesoftware.jsse.webid.certs;
 
 import static org.junit.Assert.*;
 
+import java.io.IOException;
+import java.security.InvalidKeyException;
 import java.security.KeyPair;
 import java.security.KeyPairGenerator;
-import java.security.KeyStore;
+import java.security.NoSuchAlgorithmException;
+import java.security.NoSuchProviderException;
 import java.security.SecureRandom;
 import java.security.Security;
-import java.security.cert.X509Certificate;
+import java.security.SignatureException;
+import java.security.interfaces.RSAPublicKey;
+import java.security.spec.InvalidKeySpecException;
 
+import org.bouncycastle.asn1.ASN1ObjectIdentifier;
+import org.bouncycastle.asn1.ASN1Primitive;
+import org.bouncycastle.asn1.mozilla.SignedPublicKeyAndChallenge;
+import org.bouncycastle.asn1.pkcs.PKCSObjectIdentifiers;
+import org.bouncycastle.asn1.x509.AlgorithmIdentifier;
+import org.bouncycastle.jce.netscape.NetscapeCertRequest;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
+import org.bouncycastle.mozilla.jcajce.JcaSignedPublicKeyAndChallenge;
+import org.bouncycastle.operator.OperatorCreationException;
+import org.bouncycastle.operator.jcajce.JcaContentVerifierProviderBuilder;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
-import com.ironhorsesoftware.jsse.webid.Constants;
-
 /**
- * Tests {@link WebIdX509CertificateBuilderFactory}.
+ * Tests the {@link WebIdX509CertificateBuilder}.
  *
  * @author Mike Pigott (mpigott@ironhorsesoftware.com)
  */
 public class WebIdX509CertificateBuilderTest {
 
-  private static SecureRandom rng;
+  private static WebIdX509CertificateBuilderFactory factory;
   private static KeyPairGenerator keyGen;
 
-  private KeyPair keyPair;
+  private WebIdX509CertificateBuilder builder;
 
   /**
-   * Adds the {@link BouncyCastleProvider} to the
-   * security provider list, and initializes the
-   * random number generator.
-   * 
-   * @throws java.lang.Exception If unable to configure the key generator.
+   * Configures a {@link WebIdX509CertificateBuilderFactory}
+   * for use when running the tests.
+   *
+   * @throws java.lang.Exception If unable to construct the certificate builder factory.
    */
   @BeforeClass
-  public static void beforeClass() throws Exception {
+  public static void setUpBeforeClass() throws Exception {
     if (Security.getProvider(BouncyCastleProvider.PROVIDER_NAME) == null) {
       Security.addProvider(new BouncyCastleProvider());
     }
 
-    rng = new SecureRandom();
+    final SecureRandom rng = new SecureRandom();
 
     keyGen =
         KeyPairGenerator.getInstance(
@@ -63,76 +74,71 @@ public class WebIdX509CertificateBuilderTest {
             BouncyCastleProvider.PROVIDER_NAME);
 
     keyGen.initialize(2048, rng);
+
+    final KeyPair keyPair = keyGen.generateKeyPair();
+
+    factory =
+        new WebIdX509CertificateBuilderFactory(keyPair);
   }
 
   /**
-   * Sets up the public-key/secret-key pair to be used in the test.
+   * Configures a {@link WebIdX509CertificateBuilder}
+   * for use when running each test.
+   *
+   * @throws java.lang.Exception If unable to construct the certificate builder.
    */
   @Before
-  public void setUp() {
-    this.keyPair = keyGen.generateKeyPair();
+  public void setUp() throws Exception {
+    builder = factory.newCertificateBuilder();
   }
 
-  @Test
-  public void testKeyPairConstructor() throws Exception {
-    final WebIdX509CertificateBuilderFactory factory =
-        new WebIdX509CertificateBuilderFactory(this.keyPair);
-
-    assertEquals(this.keyPair.getPrivate(), factory.getWebIdRootPrivateKey());
-
-    final X509Certificate certificate = factory.getWebIdRootCertificate();
-
-    assertNotNull(certificate);
-    assertEquals(this.keyPair.getPublic(), certificate.getPublicKey());
-    assertEquals(Constants.WEBID_ISSUER, certificate.getSubjectX500Principal());
-    assertEquals(Constants.WEBID_ISSUER, certificate.getSubjectX500Principal());
+  @Test(expected = IllegalArgumentException.class)
+  public void testSetNullCommonName() {
+    builder.setCommonName(null);
   }
 
-  @Test
-  public void testTwoKeyConstructor() throws Exception {
-    final WebIdX509CertificateBuilderFactory factory =
-        new WebIdX509CertificateBuilderFactory(this.keyPair.getPublic(), this.keyPair.getPrivate());
-
-    assertEquals(this.keyPair.getPrivate(), factory.getWebIdRootPrivateKey());
-
-    final X509Certificate certificate = factory.getWebIdRootCertificate();
-
-    assertNotNull(certificate);
-    assertEquals(this.keyPair.getPublic(), certificate.getPublicKey());
-    assertEquals(Constants.WEBID_ISSUER, certificate.getSubjectX500Principal());
-    assertEquals(Constants.WEBID_ISSUER, certificate.getSubjectX500Principal());
+  @Test(expected = IllegalArgumentException.class)
+  public void testSetEmptyCommonName() {
+    builder.setCommonName("   ");
   }
 
-  @Test
-  public void testCertificateConstructor() throws Exception {
-    final WebIdX509CertificateBuilderFactory firstFactory =
-        new WebIdX509CertificateBuilderFactory(this.keyPair.getPublic(), this.keyPair.getPrivate());
-
-    final WebIdX509CertificateBuilderFactory factory =
-        new WebIdX509CertificateBuilderFactory(firstFactory.getWebIdRootCertificate(), firstFactory.getWebIdRootPrivateKey());
-
-    assertEquals(this.keyPair.getPrivate(), factory.getWebIdRootPrivateKey());
-    assertEquals(firstFactory.getWebIdRootCertificate(), factory.getWebIdRootCertificate());
+  @Test(expected = IllegalArgumentException.class)
+  public void testSetInvalidCommonName() {
+    builder.setCommonName("<?+#*3>");
   }
 
-  @Test
-  public void testKeyStoreConstructor() throws Exception {
-    final WebIdX509CertificateBuilderFactory firstFactory =
-        new WebIdX509CertificateBuilderFactory(this.keyPair.getPublic(), this.keyPair.getPrivate());
+  @Test(expected = IllegalArgumentException.class)
+  public void testSetNullRSAPublicKey() {
+    builder.setPublicKey((RSAPublicKey) null);
+  }
 
+  @Test(expected = IllegalArgumentException.class)
+  public void testSetNullSPKAC() throws InvalidKeyException, OperatorCreationException, NoSuchAlgorithmException, NoSuchProviderException, IOException {
+    builder.setPublicKey((JcaSignedPublicKeyAndChallenge) null, "<CHALLENGE>");
+  }
 
-    final String alias = "WebID";
-    final char[] password = "password".toCharArray();
-    final X509Certificate certificate = firstFactory.getWebIdRootCertificate();
+  @Test(expected = InvalidKeyException.class)
+  public void testSetECDSAKeySPKAC() throws NoSuchAlgorithmException, InvalidKeySpecException, NoSuchProviderException, IOException, InvalidKeyException, SignatureException, OperatorCreationException {
+    final String oid = "1.3.101.113"; // ED448
+    final String challenge = "Hello";
 
-    final KeyStore keyStore = KeyStore.getInstance(KeyStore.getDefaultType());
-    keyStore.load(null, password);
-    keyStore.setKeyEntry(alias, firstFactory.getWebIdRootPrivateKey(), password, new X509Certificate[] { certificate });
+    final AlgorithmIdentifier algId = new AlgorithmIdentifier(new ASN1ObjectIdentifier(oid));
 
-    final WebIdX509CertificateBuilderFactory factory =
-        new WebIdX509CertificateBuilderFactory(keyStore, alias, password);
+    final KeyPairGenerator keyGen = KeyPairGenerator.getInstance("ED448");
+    keyGen.initialize(448);
 
-    assertEquals(this.keyPair.getPrivate(), factory.getWebIdRootPrivateKey());
-    assertEquals(certificate, factory.getWebIdRootCertificate());
+    final KeyPair keyPair = keyGen.genKeyPair();
+
+    final NetscapeCertRequest ncr = new NetscapeCertRequest(challenge, algId, keyPair.getPublic());
+    ncr.sign(keyPair.getPrivate());
+    ncr.verify(challenge);
+
+    final JcaSignedPublicKeyAndChallenge spkac = new JcaSignedPublicKeyAndChallenge(ncr.toASN1Primitive().getEncoded());
+
+    assertEquals(challenge, spkac.getChallenge());
+    assertEquals(oid, spkac.getSubjectPublicKeyInfo().getAlgorithm().getAlgorithm().getId());
+    assertEquals(keyPair.getPublic(), spkac.getPublicKey());
+
+    builder.setPublicKey(spkac, challenge);
   }
 }
