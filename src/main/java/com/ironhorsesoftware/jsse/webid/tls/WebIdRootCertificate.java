@@ -29,14 +29,16 @@ import java.security.cert.X509Certificate;
 import java.util.Date;
 import java.util.Set;
 
+import javax.security.auth.x500.X500Principal;
+
 import com.ironhorsesoftware.jsse.webid.Constants;
 
 /**
  * An instance of this class is returned by {@link WebIdTrustManager#getAcceptedIssuers()}
  * for use when requesting certificates from the client, to ensure they are WebID certificates.
  *
- * Only the {@link #getSubjectDN()} method is needed for this purpose; the remainder of the
- * class is unimplemented and the remaining methods throw {@link UnsupportedOperationException}s.
+ * Only the {@link #getSubjectX500Principal()} method is needed for this purpose; the remainder of
+ * the class is unimplemented and the remaining methods throw {@link UnsupportedOperationException}s.
  *
  * @author Mike Pigott (mpigott@ironhorsesoftware.com)
  * @see WebIdTrustManager#getAcceptedIssuers()
@@ -62,6 +64,26 @@ final class WebIdRootCertificate extends X509Certificate {
    */
   @Override
   public Principal getSubjectDN() {
+    return Constants.WEBID_ISSUER;
+  }
+
+  /**
+   * Returns the Web ID Issuer.
+   *
+   * @return {@link Constants#WEBID_ISSUER}.
+   * @see java.security.cert.X509Certificate#getIssuerX500Principal()
+   */
+  public X500Principal getIssuerX500Principal() {
+    return Constants.WEBID_ISSUER;
+  }
+
+  /**
+   * Returns the Web ID Issuer.
+   *
+   * @return {@link Constants#WEBID_ISSUER}.
+   * @see java.security.cert.X509Certificate#getIssuerX500Principal()
+   */
+  public X500Principal getSubjectX500Principal() {
     return Constants.WEBID_ISSUER;
   }
 
