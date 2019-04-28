@@ -32,6 +32,7 @@ import java.security.cert.X509Certificate;
 import java.security.interfaces.RSAPublicKey;
 import java.security.spec.InvalidKeySpecException;
 import java.util.Collection;
+import java.util.Date;
 import java.util.List;
 
 import javax.security.auth.x500.X500Principal;
@@ -60,6 +61,8 @@ public class WebIdX509CertificateBuilderTest {
   private static final String VALID_CN = "Michael Pigott";
   private static final String VALID_EMAIL = "mpigott@ironhorsesoftware.tech";
   private static final String VALID_URI = "https://www.ironhorsesoftware.com/profile#me";
+
+  private static final long FIFTY_NINE_MINUTES_AGO_IN_MILLIS = 59 * 60 * 100;
 
   private static WebIdX509CertificateBuilderFactory factory;
   private static KeyPairGenerator keyGen;
@@ -252,6 +255,7 @@ public class WebIdX509CertificateBuilderTest {
 
   private void verifyCertificateInvariants(X509Certificate certificate) throws InvalidKeyException, CertificateException, NoSuchAlgorithmException, NoSuchProviderException, SignatureException {
     certificate.checkValidity();
+    certificate.checkValidity(new Date(System.currentTimeMillis() - FIFTY_NINE_MINUTES_AGO_IN_MILLIS));
     certificate.verify(factory.getWebIdRootCertificate().getPublicKey());
     assertEquals(Constants.WEBID_ISSUER, certificate.getIssuerX500Principal());
 
@@ -273,16 +277,22 @@ public class WebIdX509CertificateBuilderTest {
     assertEquals(KeyPurposeId.id_kp_clientAuth.toOID().toString(), extendedKeyUsages.get(0));
   }
 
+  private long approximateValidUntil(int yearsValid) {
+    long numMillis = ((long) (yearsValid * Constants.APPROX_DAYS_IN_YEAR)) * Constants.ONE_DAY_IN_MILLIS;
+    return numMillis - Constants.ONE_HOUR_IN_MILLIS;
+  }
+
   @Test
   public void testBuildCertificateWithRSAKeyAndEmail() throws URISyntaxException, CertIOException, CertificateException, OperatorCreationException, InvalidKeyException, NoSuchAlgorithmException, NoSuchProviderException, SignatureException {
     final X500Principal subject = new X500Principal("CN=" + VALID_CN + ",O=Solid.VIP");
     final RSAPublicKey publicKey = (RSAPublicKey) keyGen.generateKeyPair().getPublic();
+    final int yearsValid = 1;
 
     builder.setCommonName(VALID_CN);
     builder.setEmailAddress(VALID_EMAIL);
     builder.setPublicKey(publicKey);
     builder.addWebId(new URI(VALID_URI));
-    builder.setYearsValid(1);
+    builder.setYearsValid(yearsValid);
 
     final X509Certificate certificate = builder.build();
 
@@ -295,11 +305,13 @@ public class WebIdX509CertificateBuilderTest {
     for (List<?> san : subjectAlternateNames) {
       final Integer type = (Integer) san.get(0);
       switch (type.intValue()) {
-        case 1:  assertEquals(VALID_EMAIL, san.get(1).toString()); break;
-        case 6:  assertEquals(VALID_URI, san.get(1).toString()); break;
+        case 1:  assertEquals(VALID_EMAIL, san.get(1).toString()); break; // rfc822
+        case 6:  assertEquals(VALID_URI, san.get(1).toString()); break;   // uniformResourceIdentifier
         default: fail("Unrecognized subject alternative name of type " + type);
       }
     }
+
+    certificate.checkValidity(new Date(System.currentTimeMillis() + approximateValidUntil(yearsValid)));
 
     verifyCertificateInvariants(certificate);
   }
@@ -307,6 +319,7 @@ public class WebIdX509CertificateBuilderTest {
   @Test
   public void testBuildCertificateWithSPKAC() throws InvalidKeyException, NoSuchAlgorithmException, InvalidKeySpecException, NoSuchProviderException, SignatureException, IOException, OperatorCreationException, URISyntaxException, CertificateException {
     final X500Principal subject = new X500Principal("CN=" + VALID_CN + ",O=Solid.VIP");
+    final int yearsValid = 20;
 
     final String challenge = "I challenge you to a duel!";
     final JcaSignedPublicKeyAndChallenge spkac = buildSPKAC("RSA", 2048, "1.2.840.113549.1.1.10", challenge);
@@ -314,7 +327,7 @@ public class WebIdX509CertificateBuilderTest {
     builder.setCommonName(VALID_CN);
     builder.setPublicKey(spkac, challenge);
     builder.addWebId(new URI(VALID_URI));
-    builder.setYearsValid(20);
+    builder.setYearsValid(yearsValid);
 
     final X509Certificate certificate = builder.build();
 
@@ -327,10 +340,12 @@ public class WebIdX509CertificateBuilderTest {
     for (List<?> san : subjectAlternateNames) {
       final Integer type = (Integer) san.get(0);
       switch (type.intValue()) {
-        case 6:  assertEquals(VALID_URI, san.get(1).toString()); break;
+        case 6:  assertEquals(VALID_URI, san.get(1).toString()); break; // uniformResourceIdentifier
         default: fail("Unrecognized subject alternative name of type " + type);
       }
     }
+
+    certificate.checkValidity(new Date(System.currentTimeMillis() + approximateValidUntil(yearsValid)));
 
     verifyCertificateInvariants(certificate);
   }
