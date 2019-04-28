@@ -153,4 +153,32 @@ public class WebIdTrustManagerTest {
 
     verifyHttpURLConnectionInvariants(conn);
   }
+
+  @Test
+  public void testGetJenaRdfEncodingType() {
+    final String[] inputMapping = new String[] {
+        RDFLanguages.TURTLE.getHeaderString(),
+        RDFLanguages.RDFXML.getHeaderString(),
+        RDFLanguages.NTRIPLES.getHeaderString(),
+        RDFLanguages.JSONLD.getHeaderString()
+    };
+
+    final String[] outputMapping = new String[] {
+        RDFLanguages.TURTLE.getName(),
+        RDFLanguages.RDFXML.getName(),
+        RDFLanguages.NTRIPLES.getName(),
+        RDFLanguages.JSONLD.getName()
+    };
+
+    assertEquals(inputMapping.length, outputMapping.length);
+
+    for (int idx = 0; idx < inputMapping.length; ++idx) {
+      assertEquals(outputMapping[idx], WebIdTrustManager.getJenaRdfEncodingType(inputMapping[idx]));
+    }
+  }
+
+  @Test
+  public void testValidateClaim() {
+    
+  }
 }

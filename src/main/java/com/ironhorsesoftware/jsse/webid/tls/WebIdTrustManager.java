@@ -293,7 +293,7 @@ public final class WebIdTrustManager extends X509ExtendedTrustManager {
     return profile;
   }
 
-  String getJenaRdfEncodingType(String contentType) {
+  static String getJenaRdfEncodingType(String contentType) {
     if (contentType.equals(RDFLanguages.TURTLE.getHeaderString())) {
       return RDFLanguages.TURTLE.getName();
 
