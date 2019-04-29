@@ -30,11 +30,11 @@ import javax.net.ssl.TrustManagerFactorySpi;
  * 
  * @author Mike Pigott (mpigott@ironhorsesoftware.com)
  */
-public class TrustManagerFactory extends TrustManagerFactorySpi {
+public class WebIdTrustManagerFactory extends TrustManagerFactorySpi {
 
   private List<KeyStore> validatedCertificateStores;
 
-  public TrustManagerFactory() {
+  public WebIdTrustManagerFactory() {
     this.validatedCertificateStores = null;
   }
 
@@ -43,7 +43,7 @@ public class TrustManagerFactory extends TrustManagerFactorySpi {
    * @see javax.net.ssl.TrustManagerFactorySpi#engineGetTrustManagers()
    */
   @Override
-  protected TrustManager[] engineGetTrustManagers() {
+  public TrustManager[] engineGetTrustManagers() {
     return new TrustManager[]{ new WebIdTrustManager(validatedCertificateStores, true) };
   }
 
@@ -55,7 +55,7 @@ public class TrustManagerFactory extends TrustManagerFactorySpi {
    * @see javax.net.ssl.TrustManagerFactorySpi#engineInit(java.security.KeyStore)
    */
   @Override
-  protected void engineInit(KeyStore keyStore) throws KeyStoreException {
+  public void engineInit(KeyStore keyStore) throws KeyStoreException {
     if (keyStore == null) {
       throw new KeyStoreException("The KeyStore must not be null.");
     }
@@ -79,7 +79,7 @@ public class TrustManagerFactory extends TrustManagerFactorySpi {
    * @see javax.net.ssl.TrustManagerFactorySpi#engineInit(javax.net.ssl.ManagerFactoryParameters)
    */
   @Override
-  protected void engineInit(ManagerFactoryParameters mfp) throws InvalidAlgorithmParameterException {
+  public void engineInit(ManagerFactoryParameters mfp) throws InvalidAlgorithmParameterException {
     if (mfp == null) {
       throw new InvalidAlgorithmParameterException("Manager Factory Parameters cannot be null.");
 

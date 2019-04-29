@@ -43,7 +43,7 @@ import javax.net.ssl.X509ExtendedKeyManager;
  * @see X509Certificate#getSubjectAlternativeNames()
  * @author Mike Pigott (mpigott@ironhorsesoftware.com)
  */
-public class KeyManager extends X509ExtendedKeyManager {
+public class SniAndCertDnsKeyManager extends X509ExtendedKeyManager {
 
   private X509ExtendedKeyManager parentKeyManager;
   private String defaultAlias;
@@ -56,7 +56,7 @@ public class KeyManager extends X509ExtendedKeyManager {
    * @param defaultAlias The default alias to use when none can be found, or <code>null</code> if none.
    * @throws IllegalArgumentException if <code>parentKeyManager</code> is <code>null</code>.
    */
-  public KeyManager(X509ExtendedKeyManager parentKeyManager, String defaultAlias) {
+  public SniAndCertDnsKeyManager(X509ExtendedKeyManager parentKeyManager, String defaultAlias) {
     if (parentKeyManager == null) {
       throw new IllegalArgumentException("The parent key manager cannot be null.");
     }

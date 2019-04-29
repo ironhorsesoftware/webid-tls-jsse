@@ -91,7 +91,7 @@ public class WebIdTrustManagerTest {
     final KeyPair keyPair = keyGen.generateKeyPair();
 
     final WebIdX509CertificateBuilder builder = factory.newCertificateBuilder();
-    final TrustManagerFactory tmFactory = new TrustManagerFactory();
+    final WebIdTrustManagerFactory tmFactory = new WebIdTrustManagerFactory();
 
     builder.setCommonName("Michael Pigott");
     builder.setPublicKey((RSAPublicKey) keyPair.getPublic());

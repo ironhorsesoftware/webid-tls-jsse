@@ -24,6 +24,11 @@ import javax.security.auth.x500.X500Principal;
 public final class Constants {
 
   /**
+   * The algorithm name to use when constructing a WebID-TLS TrustManagerFactory.
+   */
+  public static final String WEBID_TLS_ALGORITHM = "WEBID-TLS";
+
+  /**
    * This represents the X.500 distinguished name for the issuer of WebID self-signed certificates.
    * It is of the form <code>O={},CN=WebID</code> per the
    * <a href="https://www.w3.org/2005/Incubator/webid/spec/tls/">WebID-TLS specification</a>.

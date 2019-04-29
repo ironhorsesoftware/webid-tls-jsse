@@ -17,7 +17,7 @@ import org.junit.Test;
 
 import com.ironhorsesoftware.jsse.webid.Constants;
 
-public class TrustManagerFactoryTest extends TrustManagerFactory {
+public class TrustManagerFactoryTest extends WebIdTrustManagerFactory {
 
   private void testInvariants() {
     final TrustManager[] trustManagers = super.engineGetTrustManagers();
