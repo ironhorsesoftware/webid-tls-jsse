@@ -4,38 +4,40 @@ This Maven Java library implements [WebID-TLS](https://www.w3.org/2005/Incubator
 
 WebID-TLS is an authentication mechanism during the SSL handshake, using client self-signed certificates.  The server asks for a client-provided certificate, which includes a [Web ID](https://www.w3.org/2005/Incubator/webid/spec/identity/) URI.  The URI is followed to the corresponding Web ID Profile. If the server can [verify](https://www.w3.org/2005/Incubator/webid/spec/tls/#verifying-the-webid-claim) the Web ID Profile contains a copy of the public key used in the client certificate, the user is authenticated.
 
+![WebID-TLS Authentication Diagram](https://www.w3.org/2005/Incubator/webid/spec/tls/img/WebIDSequence-friendly.png)
+
 **Note:** Only RSA-based certificates are supported at this time.  The public key is [specified](https://www.w3.org/2005/Incubator/webid/spec/tls/#the-webid-profile-document) in the WebID Profile using the [Cert Ontology](https://www.w3.org/ns/auth/cert#), which only details [RSA Public Key](https://www.w3.org/ns/auth/cert#RSAPublicKey) properties to the level of detail needed for verification.
 
 This library is under active development, but it should stabilize soon.
 
 Dependency | Version | Notes
 ---------- | ------- | -------
-Java SE    | 8 |
+Java SE    | 8 | [Significant Security Enhancements](https://docs.oracle.com/javase/8/docs/technotes/guides/security/enhancements-8.html)
 [BouncyCastle](http://bouncycastle.org/java.html) | 1.61 | Used to create self-signed certificates.
 [Apache Jena](https://jena.apache.org/) | 3.10.0 | Used to verify a client-provided certificate matches the WebID Profile.
 
 This library contains a few separate pieces:
 
-### `Provider`
+### Provider
 A [JSSE Provider](https://docs.oracle.com/javase/8/docs/technotes/guides/security/SunProviders.html) which can be used to initialize a [TrustManager](https://docs.oracle.com/javase/8/docs/technotes/guides/security/jsse/JSSERefGuide.html#TrustManager) which implements the verification scheme described above.
 
 **Note:** This class is under active development, as there are [extensive steps](https://docs.oracle.com/javase/8/docs/technotes/guides/security/crypto/HowToImplAProvider.html) in creating a custom JSSE `Provider`.
 
-### `SniAndCertDnsKeyManager`
+### SniAndCertDnsKeyManager
 
 A [KeyManager](https://docs.oracle.com/javase/8/docs/technotes/guides/security/jsse/JSSERefGuide.html#KeyManager) which implements [SNI](https://docs.oracle.com/javase/8/docs/technotes/guides/security/jsse/JSSERefGuide.html#SNIExtension) and [DNS Subject Alternative Names](http://blog.differentpla.net/blog/2013/03/24/bouncy-castle-subject-alternative-names/#use-a-subject-alternative-name-extension) to allow the server to serve multiple DNS host names.
 
-### `WebIdTrustManager`
+### WebIdTrustManager
 
-This is the [TrustManager](https://docs.oracle.com/javase/8/docs/technotes/guides/security/jsse/JSSERefGuide.html#TrustManager) which verifies client certificates using WebID-TLS.  The same package also defines WebIdTrustManagerFactory, which is a [TrustManagerFactory](https://docs.oracle.com/javase/8/docs/technotes/guides/security/jsse/JSSERefGuide.html#TrustManagerFactory) to instantiate the WebIdTrustManager through the JSSE API.
+This is the [TrustManager](https://docs.oracle.com/javase/8/docs/technotes/guides/security/jsse/JSSERefGuide.html#TrustManager) which verifies client certificates using WebID-TLS.  The same package also defines `WebIdTrustManagerFactory`, which is a [TrustManagerFactory](https://docs.oracle.com/javase/8/docs/technotes/guides/security/jsse/JSSERefGuide.html#TrustManagerFactory) to instantiate the `WebIdTrustManager` through the JSSE API.
 
-### `WebIdSSLEngineBuilder`
+### WebIdSSLEngineBuilder
 
-This builds an [SSLEngine](https://docs.oracle.com/javase/8/docs/technotes/guides/security/jsse/JSSERefGuide.html#SSLEngine) with the WebID Trust Manager, SniAndCertDnsKeyManager, and specific SSLEngine options to facilitate a secure server.
+This builds an [SSLEngine](https://docs.oracle.com/javase/8/docs/technotes/guides/security/jsse/JSSERefGuide.html#SSLEngine) with the WebID Trust Manager, `SniAndCertDnsKeyManager`, and specific `SSLEngine` options to facilitate a secure server.
 
-### `WebIdX509CertificateBuilder`
+### WebIdX509CertificateBuilder
 
-This class [creates self-signed certificates](https://www.w3.org/2005/Incubator/webid/spec/tls/#certificate-creation) that can be used for WebID-TLS.  All of them will share the same self-signed issuer certificate, which is constructed using the `WebIdX509CertificateBuilderFactory`.  The issuer will have an X.500 Principal of `CN=WebID, O={}`, to give the server the option to [only accept WebID certificates](https://www.w3.org/2005/Incubator/webid/spec/tls/#certificate-example).  This is not required by the specification yet, but the WebIdTrustManager (and its factory) require it by default.
+This class [creates self-signed certificates](https://www.w3.org/2005/Incubator/webid/spec/tls/#certificate-creation) that can be used for WebID-TLS.  All of them will share the same self-signed issuer certificate, which is constructed using the `WebIdX509CertificateBuilderFactory`.  The issuer will have an X.500 Principal of `CN=WebID, O={}`, to give the server the option to [only accept WebID certificates](https://www.w3.org/2005/Incubator/webid/spec/tls/#certificate-example).  This is not required by the specification yet, but the `WebIdTrustManager` (and its factory) require it by default.
 
 ## Using the WebIdX509CertificateBuilder
 
@@ -84,7 +86,7 @@ The following code constructs an `X509Certificate` adhering to the WebID specifi
 
 ### Creating the Public Key in the Browser
 
-The [recommended way](https://www.w3.org/2005/Incubator/webid/spec/tls/#certificate-creation) to collect a public key from the browser is using the `<keygen>` tag.  However, that tag is [deprecated](https://developer.mozilla.org/en-US/docs/Web/HTML/Element/keygen) and only reliable on a few browsers, most notably Firefox.  If you choose to use it, BouncyCastle provides the [JcaSignedPublicKeyAndChallenge](http://bouncycastle.org/docs/pkixdocs1.5on/org/bouncycastle/mozilla/jcajce/JcaSignedPublicKeyAndChallenge.html) which can read that field from the HTTP request (after it has been Base-64 decoded).  The WebIdX509CertificateBuilder will accept that object as a parameter for the public key.
+The [recommended way](https://www.w3.org/2005/Incubator/webid/spec/tls/#certificate-creation) to collect a public key from the browser is using the `<keygen>` tag.  However, that tag is [deprecated](https://developer.mozilla.org/en-US/docs/Web/HTML/Element/keygen) and only reliable on a few browsers, most notably Firefox.  If you choose to use it, BouncyCastle provides the [JcaSignedPublicKeyAndChallenge class](http://bouncycastle.org/docs/pkixdocs1.5on/org/bouncycastle/mozilla/jcajce/JcaSignedPublicKeyAndChallenge.html) which can read that field from the HTTP request (after it has been Base-64 decoded).  The `WebIdX509CertificateBuilder` will accept a `JcaSignedPublicKeyAndChallenge` instance as a parameter for the public key.
 
 ### Storing the Self-Signed Root WebID Certificate in a KeyStore for Reuse
 
@@ -115,7 +117,7 @@ It is possible to construct a single self-signed root certificate, and reuse it 
     final WebIdX509CertificateBuilderFactory secondFactory = new WebIdX509CertificateBuilderFactory(keyStore, alias, password);
 ```
 
-## Using the `WebIdX509TrustManager`
+## Using the WebIdX509TrustManager
 
 The following code will use the `webIdCert` created in the previous example to verify the certificate.
 
@@ -134,7 +136,7 @@ The following code will use the `webIdCert` created in the previous example to v
     trustManager.checkClientTrusted(certificateChain, "RSA");
 ```
 
-**Note:** This code, on its own, will fail validation.  The `WebIdTrustManager` will try to follow http://www.example.com/mikepigott ([without the #map fragment](https://www.w3.org/2005/Incubator/webid/spec/tls/#verifying-the-webids)) and find nothing there.  We can preload this by initializing the WebIdTrustManagerFactory with a KeyStore:
+**Note:** This code, on its own, will fail validation.  The `WebIdTrustManager` will try to follow http://www.example.com/mikepigott ([without the #map fragment](https://www.w3.org/2005/Incubator/webid/spec/tls/#verifying-the-webids)) and find nothing there.  We can preload this by initializing the `WebIdTrustManagerFactory` with a `KeyStore`:
 
 ```java
     import java.security.KeyStore;
@@ -151,9 +153,9 @@ The following code will use the `webIdCert` created in the previous example to v
     // Retriving the TrustManagers and verifying the certificate chain is done the same as above.
 ```
 
-## The `WebIdSSLEngineBuilder`
+## WebIdSSLEngineBuilder
 
-This is the last stop on our tour.  The `WebIdSSLEngineBuilder` configures a TLS-based SSLEngine for use with the `WebIdTrustManager` and enhanced PKIX key management.  [PKIX](http://ospkibook.sourceforge.net/docs/OSPKI-2.4.6/OSPKI/pkix-overview.htm) refers to the Certificate-Authority-based system most commonly used today for SSL-based handshake authentication.  The two enhancements allow the TLS SSLEngine to serve multiple domain names:
+This is the last stop on our tour.  The `WebIdSSLEngineBuilder` configures a TLS-based `SSLEngine` for use with the `WebIdTrustManager` and enhanced PKIX key management.  [PKIX](http://ospkibook.sourceforge.net/docs/OSPKI-2.4.6/OSPKI/pkix-overview.htm) refers to the Certificate-Authority-based system most commonly used today for SSL-based handshake authentication.  The two enhancements allow the TLS `SSLEngine` to serve multiple domain names:
 
 * [Server Name Indication](https://tools.ietf.org/html/rfc6066#page-6) allows the client to tell the server what DNS host it was trying to reach during the TLS handshake.
 * [Subject Alternative Names](http://blog.differentpla.net/blog/2013/03/24/bouncy-castle-subject-alternative-names/#use-a-subject-alternative-name-extension) allow the client's certificate to describe which DNS host it was looking for.
@@ -166,10 +168,12 @@ The domain name of your server can be added to the Subject Alternative Names sec
     import com.ironhorsesoftware.jsse.webid.certs.WebIdX509CertificateBuilderFactory;
 
     final WebIdX509CertificateBuilderFactory factory = ...;
-    factory.addServerDnsName("example.com");
+    factory.addServerDnsName("www.example.com");
 ```
 
-### Configuring the `WebIdSSLEngineBuilder`
+### Configuring the WebIdSSLEngineBuilder
+
+The following code will create an `SSLEngine` ready for use.  You need to set up the `KeyStore`s for the key manager and trust manager.
 
 ```java
     import javax.net.ssl.KeyStoreBuilderParameters;
@@ -188,11 +192,13 @@ The domain name of your server can be added to the Subject Alternative Names sec
     // -- OPTIONAL PARAMETERS -- //
 
     // If the server certificate chain to present cannot be resolved by either SNI or the client certificate, use the one for this alias instead.
-    builder.setDefaultAlias("example.com");
+    builder.setDefaultAlias("www.example.com");
 
     // The default behavior is to only ask the client for certificates with an issuer of CN=WebID,O={}.
     // Setting this field to false will allow any client-side certificate to be sent along.
     builder.setRequireWebIdIssuedCertificates(false);
+
+    // -- END OF OPTIONAL PARAMETERS -- //
 
     // This SSLEngine, in addition to the above configuration, will ask for
     // client certificates in WANT mode, and use the server's preference for
