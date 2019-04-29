@@ -18,13 +18,15 @@ import java.net.Socket;
 import java.security.Principal;
 import java.security.PrivateKey;
 import java.security.cert.Certificate;
+import java.security.cert.CertificateParsingException;
 import java.security.cert.X509Certificate;
+import java.util.Collection;
+import java.util.List;
 
 import javax.net.ssl.ExtendedSSLSession;
 import javax.net.ssl.SNIHostName;
 import javax.net.ssl.SNIServerName;
 import javax.net.ssl.SSLEngine;
-import javax.net.ssl.SSLPeerUnverifiedException;
 import javax.net.ssl.SSLSession;
 import javax.net.ssl.SSLSocket;
 import javax.net.ssl.StandardConstants;
@@ -32,12 +34,13 @@ import javax.net.ssl.X509ExtendedKeyManager;
 
 /**
  * This class picks out a specific certificate when given a request that has
- * either an SNI hostname associated with it, or a client certificate with
- * a DNS Subject Alternative Name.  This is done through
- * {@link #chooseEngineServerAlias(String, Principal[], javax.net.ssl.SSLEngine)},
- * which under normal circumstances return null, but in this case should return
- * the server's alias.
+ * either an SNI host name associated with it, or a client certificate with
+ * a DNS Subject Alternative Name.  This is done through either
+ * {@link #chooseEngineServerAlias(String, Principal[], javax.net.ssl.SSLEngine)}
+ * or {@link #chooseServerAlias(String, Principal[], Socket)}.
  *
+ * @see ExtendedSSLSession#getRequestedServerNames()
+ * @see X509Certificate#getSubjectAlternativeNames()
  * @author Mike Pigott (mpigott@ironhorsesoftware.com)
  */
 public class KeyManager extends X509ExtendedKeyManager {
@@ -45,7 +48,19 @@ public class KeyManager extends X509ExtendedKeyManager {
   private X509ExtendedKeyManager parentKeyManager;
   private String defaultAlias;
 
+  /**
+   * Constructs a new <code>KeyManager</code> from the parent {@link X509ExtendedKeyManager}
+   * and default alias.  The default alias may be <code>null</code>. 
+   *
+   * @param parentKeyManager The parent key manager to forward requests to.
+   * @param defaultAlias The default alias to use when none can be found, or <code>null</code> if none.
+   * @throws IllegalArgumentException if <code>parentKeyManager</code> is <code>null</code>.
+   */
   public KeyManager(X509ExtendedKeyManager parentKeyManager, String defaultAlias) {
+    if (parentKeyManager == null) {
+      throw new IllegalArgumentException("The parent key manager cannot be null.");
+    }
+
     this.parentKeyManager = parentKeyManager;
     this.defaultAlias = defaultAlias;
   }
@@ -120,7 +135,13 @@ public class KeyManager extends X509ExtendedKeyManager {
   }
 
   /**
-   * 
+   * Determines the alias (if any) by checking:
+   * <ol>
+   *   <li>The SNI headers.</li>
+   *   <li>The client certificate's SubjectAlternativeName DNS records.</li>
+   *   <li>The parent key manager.</li>
+   *   <li>The default alias (if set).</li>
+   * </ol>
    *
    * @param keyType The key type to check the authentication of.
    * @param issuers The issuers issuing the valid root certificates.
@@ -149,7 +170,13 @@ public class KeyManager extends X509ExtendedKeyManager {
   }
 
   /**
-   * 
+   * Determines the alias (if any) by checking:
+   * <ol>
+   *   <li>The SNI headers.</li>
+   *   <li>The client certificate's SubjectAlternativeName DNS records.</li>
+   *   <li>The parent key manager.</li>
+   *   <li>The default alias (if set).</li>
+   * </ol>
    *
    * @param keyType The key type to check the authentication of.
    * @param issuers The issuers issuing the valid root certificates.
@@ -183,8 +210,8 @@ public class KeyManager extends X509ExtendedKeyManager {
     if (alias == null) {
       try {
         alias = chooseServerAliasFromClientCertificate(session.getPeerCertificates());
-      } catch (SSLPeerUnverifiedException e) {
-        // Client did not provide a certificate chain.
+      } catch (Exception e) {
+        // Client did not provide a valid certificate chain.
         alias = null;
       }
     }
@@ -205,16 +232,31 @@ public class KeyManager extends X509ExtendedKeyManager {
     return (isRecognizedHostName(hostName)) ? hostName : null;
   }
 
-  private String chooseServerAliasFromClientCertificate(Certificate[] clientCertificateChain) {
-    String alias = null;
-
+  private String chooseServerAliasFromClientCertificate(Certificate[] clientCertificateChain) throws CertificateParsingException {
     if ((clientCertificateChain == null) || (clientCertificateChain.length == 0)) {
-      return alias;
+      return null;
     }
 
-    
+    for (Certificate cert : clientCertificateChain) {
+      if (!(cert instanceof X509Certificate)) {
+        continue;
+      }
 
-    return alias;
+      final Collection<List<?>> subjectAlternativeNames = ((X509Certificate) cert).getSubjectAlternativeNames();
+      for (List<?> san : subjectAlternativeNames) {
+        if ((Integer) san.get(0) != 2) { // dNSName
+          continue;
+        }
+
+        final String hostName = san.get(1).toString();
+
+        if (isRecognizedHostName(hostName)) {
+          return hostName;
+        }
+      }
+    }
+
+    return null;
   }
 
   private boolean isRecognizedHostName(String hostName) {
