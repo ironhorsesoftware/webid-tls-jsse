@@ -121,7 +121,7 @@ public class WebIdX509CertificateBuilderFactoryTest {
   @Test
   public void testKeyStoreConstructor() throws Exception {
     final WebIdX509CertificateBuilderFactory firstFactory =
-        new WebIdX509CertificateBuilderFactory(this.keyPair.getPublic(), this.keyPair.getPrivate());
+        new WebIdX509CertificateBuilderFactory(this.keyPair);
 
 
     final String alias = "WebID";
@@ -151,7 +151,7 @@ public class WebIdX509CertificateBuilderFactoryTest {
     final WebIdX509CertificateBuilderFactory factory =
         new WebIdX509CertificateBuilderFactory(this.keyPair);
     factory.addServerDnsName("   ");
-  } 
+  }
 
   @Test(expected = IllegalArgumentException.class)
   public void testAddNullServerDnsNameCollection() throws OperatorCreationException, CertificateException, CertIOException {

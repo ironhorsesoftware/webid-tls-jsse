@@ -104,7 +104,7 @@ public class WebIdTrustManagerTest {
 
     final KeyStore keyStore = KeyStore.getInstance(KeyStore.getDefaultType());
     keyStore.load(null, keyStorePassword);
-    keyStore.setKeyEntry(webIdUri, keyPair.getPrivate(), keyStorePassword, certificateChain);
+    keyStore.setCertificateEntry(webIdUri, webIdCert);
 
     tmFactory.engineInit(keyStore);
 
