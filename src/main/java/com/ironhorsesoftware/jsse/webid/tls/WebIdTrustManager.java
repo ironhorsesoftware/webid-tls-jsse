@@ -24,6 +24,7 @@ import java.security.cert.X509Certificate;
 import java.security.interfaces.RSAPublicKey;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.List;
 
 import javax.net.ssl.SSLEngine;
@@ -68,15 +69,19 @@ public final class WebIdTrustManager extends X509ExtendedTrustManager {
   }
 
   private X509Certificate[] acceptedIssuers;
-  private KeyStore validatedCertificateStore;
+  private List<KeyStore> validatedCertificateStores;
 
   public WebIdTrustManager() {
     acceptedIssuers = new X509Certificate[0];
-    validatedCertificateStore = null;
+    validatedCertificateStores = Collections.emptyList();
   }
 
-  public WebIdTrustManager(KeyStore keyStore, boolean requireWebIdIssuedCertificates) {
-    this.validatedCertificateStore = keyStore;
+  public WebIdTrustManager(List<KeyStore> keyStores, boolean requireWebIdIssuedCertificates) {
+    if (keyStores == null) {
+      this.validatedCertificateStores = Collections.emptyList();
+    } else {
+      this.validatedCertificateStores = keyStores;
+    }
 
     if (requireWebIdIssuedCertificates) {
       acceptedIssuers = new X509Certificate[]{ new WebIdRootCertificate() };
@@ -310,7 +315,7 @@ public final class WebIdTrustManager extends X509ExtendedTrustManager {
     throw new IllegalArgumentException("Unrecognized content type " + contentType);
   }
 
-  void validateClaim(Model profile, WebIdClaim claim) throws CertificateException {
+  static void validateClaim(Model profile, WebIdClaim claim) throws CertificateException {
     final ParameterizedSparqlString query = new ParameterizedSparqlString(WEBID_CERT_SPARQL_QUERY);
     query.setIri("webid", claim.getUri().toString());
     query.setLiteral("mod", claim.getPublicKey().getModulus().toString(), XSDDatatype.XSDpositiveInteger);
@@ -328,26 +333,24 @@ public final class WebIdTrustManager extends X509ExtendedTrustManager {
   }
 
   private boolean isValidatedClaim(WebIdClaim claim) {
-    if (validatedCertificateStore == null) {
-      return false;
+    for (KeyStore validatedCertificateStore : this.validatedCertificateStores) {
+      try {
+        return claim.getCertificate().equals(validatedCertificateStore.getCertificate(claim.getUri().toString()));
+
+      } catch (Exception e) {
+        continue;
+      }
     }
 
-    try {
-      return claim.getCertificate().equals(validatedCertificateStore.getCertificate(claim.getUri().toString()));
-
-    } catch (Exception e) {
-      return false;
-    }
+    return false;
   }
 
   private void addValidatedClaim(WebIdClaim claim) {
-    if (validatedCertificateStore == null) {
-      return;
-    }
-
-    try {
-      validatedCertificateStore.setCertificateEntry(claim.getUri().toString(), claim.getCertificate());
-    } catch (Exception e) {
+    for (KeyStore validatedCertificateStore : this.validatedCertificateStores) {
+      try {
+        validatedCertificateStore.setCertificateEntry(claim.getUri().toString(), claim.getCertificate());
+      } catch (Exception e) {
+      }
     }
   }
 }

@@ -17,6 +17,7 @@ package com.ironhorsesoftware.jsse;
 import java.net.Socket;
 import java.security.Principal;
 import java.security.PrivateKey;
+import java.security.cert.Certificate;
 import java.security.cert.X509Certificate;
 
 import javax.net.ssl.ExtendedSSLSession;
@@ -181,7 +182,7 @@ public class KeyManager extends X509ExtendedKeyManager {
 
     if (alias == null) {
       try {
-        alias = chooseServerAliasFromClientCertificate(session.getPeerCertificateChain());
+        alias = chooseServerAliasFromClientCertificate(session.getPeerCertificates());
       } catch (SSLPeerUnverifiedException e) {
         // Client did not provide a certificate chain.
         alias = null;
@@ -201,23 +202,34 @@ public class KeyManager extends X509ExtendedKeyManager {
       }
     }
 
+    return (isRecognizedHostName(hostName)) ? hostName : null;
+  }
+
+  private String chooseServerAliasFromClientCertificate(Certificate[] clientCertificateChain) {
+    String alias = null;
+
+    if ((clientCertificateChain == null) || (clientCertificateChain.length == 0)) {
+      return alias;
+    }
+
+    
+
+    return alias;
+  }
+
+  private boolean isRecognizedHostName(String hostName) {
     if (hostName == null) {
-      return null;
+      return false;
     }
 
     if (getCertificateChain(hostName) == null) {
-      return null;
+      return false;
     }
 
     if (getPrivateKey(hostName) == null) {
-      return null;
+      return false;
     }
 
-    return hostName;
-  }
-
-  private String chooseServerAliasFromClientCertificate(javax.security.cert.X509Certificate[] clientCertificateChain) {
-    // TODO
-    return null;
+    return true;
   }
 }
