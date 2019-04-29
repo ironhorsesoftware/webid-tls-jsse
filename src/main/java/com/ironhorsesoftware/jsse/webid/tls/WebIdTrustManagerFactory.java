@@ -33,29 +33,20 @@ import javax.net.ssl.TrustManagerFactorySpi;
 public class WebIdTrustManagerFactory extends TrustManagerFactorySpi {
 
   private List<KeyStore> validatedCertificateStores;
+  private boolean requireWebIdIssuedCertificates;
 
   public WebIdTrustManagerFactory() {
     this.validatedCertificateStores = null;
+    this.requireWebIdIssuedCertificates = true;
   }
 
-  /**
-   * Constructs a single {@link WebIdTrustManager} and returns it in the array.
-   * @see javax.net.ssl.TrustManagerFactorySpi#engineGetTrustManagers()
-   */
   @Override
-  public TrustManager[] engineGetTrustManagers() {
-    return new TrustManager[]{ new WebIdTrustManager(validatedCertificateStores, true) };
+  protected TrustManager[] engineGetTrustManagers() {
+    return new TrustManager[]{ new WebIdTrustManager(validatedCertificateStores, requireWebIdIssuedCertificates) };
   }
 
-  /**
-   * Adds the provided {@link KeyStore} to the set of key stores the {@link WebIdTrustManager}
-   * will use when verifying certificates.  If a previously-unrecognized certificate is verified
-   * by the trust manager, it will be added to this {@link KeyStore}.
-   *
-   * @see javax.net.ssl.TrustManagerFactorySpi#engineInit(java.security.KeyStore)
-   */
   @Override
-  public void engineInit(KeyStore keyStore) throws KeyStoreException {
+  protected void engineInit(KeyStore keyStore) throws KeyStoreException {
     if (keyStore == null) {
       throw new KeyStoreException("The KeyStore must not be null.");
     }
@@ -67,19 +58,8 @@ public class WebIdTrustManagerFactory extends TrustManagerFactorySpi {
     this.validatedCertificateStores.add(keyStore);
   }
 
-  /**
-   * Given a set of {@link KeyStoreBuilderParameters}, constructs the corresponding {@link KeyStore}s
-   * and adds them to the set of key stores the {@link WebIdTrustManager} will use when verifying
-   * certificates.  If a previously-unrecognized certificate is verified by the trust manager, it
-   * will be added to all {@link KeyStore}s built.
-   *
-   * @throws InvalidAlgorithmParameterException if the ManagerFactoryParameters is either null or not
-   *                                            an instance of KeyStoreBuilderParameters, or if a
-   *                                            KeyStore cannot be constructed.
-   * @see javax.net.ssl.TrustManagerFactorySpi#engineInit(javax.net.ssl.ManagerFactoryParameters)
-   */
   @Override
-  public void engineInit(ManagerFactoryParameters mfp) throws InvalidAlgorithmParameterException {
+  protected void engineInit(ManagerFactoryParameters mfp) throws InvalidAlgorithmParameterException {
     if (mfp == null) {
       throw new InvalidAlgorithmParameterException("Manager Factory Parameters cannot be null.");
 
@@ -100,5 +80,59 @@ public class WebIdTrustManagerFactory extends TrustManagerFactorySpi {
         throw new InvalidAlgorithmParameterException("Cannot construct all KeyStores.", e);
       }
     }
+  }
+
+  /**
+   * Returns whether the client must supply certificates
+   * issued by the DN <code>CN=WebID, O={}</code>.
+   * 
+   * The default is <code>true</code>.
+   */
+  public boolean areWebIdIssuedCertificatesRequired() {
+    return requireWebIdIssuedCertificates;
+  }
+
+  /**
+   * Sets whether the client must supply certificates
+   * issued by the DN <code>CN=WebID, O={}</code>.
+   */
+  public void setRequireWebIdIssuedCertificates(boolean require) {
+    this.requireWebIdIssuedCertificates = require;
+  }
+
+  /**
+   * Constructs a single {@link WebIdTrustManager} and returns it in the array.
+   * @see javax.net.ssl.TrustManagerFactorySpi#engineGetTrustManagers()
+   */
+  public TrustManager[] getTrustManagers() {
+    return engineGetTrustManagers();
+  }
+
+  /**
+   * Adds the provided {@link KeyStore} to the set of key stores the {@link WebIdTrustManager}
+   * will use when verifying certificates.  If a previously-unrecognized certificate is verified
+   * by the trust manager, it will be added to this {@link KeyStore}.
+   *
+   * @see javax.net.ssl.TrustManagerFactorySpi#engineInit(java.security.KeyStore)
+   */
+  public WebIdTrustManagerFactory init(KeyStore keyStore) throws KeyStoreException {
+    engineInit(keyStore);
+    return this;
+  }
+
+  /**
+   * Given a set of {@link KeyStoreBuilderParameters}, constructs the corresponding {@link KeyStore}s
+   * and adds them to the set of key stores the {@link WebIdTrustManager} will use when verifying
+   * certificates.  If a previously-unrecognized certificate is verified by the trust manager, it
+   * will be added to all {@link KeyStore}s built.
+   *
+   * @throws InvalidAlgorithmParameterException if the ManagerFactoryParameters is either null or not
+   *                                            an instance of KeyStoreBuilderParameters, or if a
+   *                                            KeyStore cannot be constructed.
+   * @see javax.net.ssl.TrustManagerFactorySpi#engineInit(javax.net.ssl.ManagerFactoryParameters)
+   */
+  public WebIdTrustManagerFactory init(ManagerFactoryParameters mfp) throws InvalidAlgorithmParameterException {
+    engineInit(mfp);
+    return this;
   }
 }

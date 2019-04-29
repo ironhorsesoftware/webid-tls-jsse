@@ -44,14 +44,31 @@ public class WebIdSSLEngineBuilder {
 
   private KeyStore trustManagerKeyStore;
   private KeyStoreBuilderParameters trustManagerKeyStoreParams;
+  private boolean requireWebIdIssuedCertificates;
 
+  /**
+   * Initializes the builder.
+   */
   public WebIdSSLEngineBuilder() {
     this.keyManagerKeyStoreBuilders = null;
     this.defaultAlias = null;
     this.trustManagerKeyStore = null;
     this.trustManagerKeyStoreParams = null;
+    this.requireWebIdIssuedCertificates = true;
   }
 
+  /**
+   * Initializes the PKIX {@link KeyManagerFactory} with the provided
+   * {@link KeyStore} and <code>password</code>.  If either this function
+   * or {@link #setPkixKeyManagerFactoryParams(KeyStoreBuilderParameters)}
+   * was already called, an {@link IllegalStateException} will be thrown.
+   *
+   * @param keyStore The key store to use with the key manager.
+   * @param password The password needed to access the key manager.
+   * @return This builder, for chaining.
+   * @throws IllegalStateException if the key manager was already configured.
+   * @throws IllegalArgumentException if <code>keyStore</code> is <code>null</code>.
+   */
   public WebIdSSLEngineBuilder setPkixKeyManagerKeyStore(KeyStore keyStore, char[] password) {
     if (keyManagerKeyStoreBuilders != null) {
       throw new IllegalStateException("The Key Manager Factory was already configured.");
@@ -67,6 +84,17 @@ public class WebIdSSLEngineBuilder {
     return this;
   }
 
+  /**
+   * Initializes the PKIX {@link KeyManagerFactory} with the provided
+   * {@link KeyStoreBuilderParameters}.  If either this function or
+   * {@link #setPkixKeyManagerKeyStore(KeyStore, char[])} was already
+   * called, an {@link IllegalStateException} will be thrown.
+   *
+   * @param params The <code>KeyStore</code> builder parameters to use with the key manager.
+   * @return This builder, for chaining.
+   * @throws IllegalStateException if the key manager was already configured.
+   * @throws IllegalArgumentException if <code>params</code> is <code>null</code>.
+   */
   public WebIdSSLEngineBuilder setPkixKeyManagerFactoryParams(KeyStoreBuilderParameters params) {
     if (keyManagerKeyStoreBuilders != null) {
       throw new IllegalStateException("The Key Manager Factory was already configured.");
@@ -80,21 +108,86 @@ public class WebIdSSLEngineBuilder {
     return this;
   }
 
+  /**
+   * Sets the {@link KeyStore} the {@link WebIdTrustManager} should use when checking
+   * if a client certificate was previously validated, and to add validated client
+   * certificates to.  If both this method and
+   * {@link #setWebIdTrustManagerFactoryParams(KeyStoreBuilderParameters)} are called,
+   * the {@link WebIdTrustManagerFactory} will be initialized with both sets of arguments.
+   *
+   * @return This builder, for chaining.
+   */
   public WebIdSSLEngineBuilder setWebIdTrustManagerFactoryKeyStore(KeyStore keyStore) {
     this.trustManagerKeyStore = keyStore;
     return this;
   }
 
+  /**
+   * Sets the {@link KeyStoreBuilderParameters} describing how to interact with the {@link KeyStore}s
+   * the {@link WebIdTrustManager} should use when checking
+   * if a client certificate was previously validated, and to add validated client
+   * certificates to.  If both this method and
+   * {@link #setWebIdTrustManagerFactoryKeyStore(KeyStore)} are called,
+   * the {@link WebIdTrustManagerFactory} will be initialized with both sets of arguments.
+   *
+   * @return This builder, for chaining.
+   */
   public WebIdSSLEngineBuilder setWebIdTrustManagerFactoryParams(KeyStoreBuilderParameters params) {
     this.trustManagerKeyStoreParams = params;
     return this;
   }
 
+  /**
+   * Sets the default alias the {@link SniAndCertDnsKeyManager} should return if an
+   * alias could not be verified using either SNI or the client certificate's DNS
+   * SubjectAlternativeNames.  This value defaults to (and may be) <code>null</code>
+   * to indicate no alias should be returned.
+   *
+   * @param defaultAlias The default server alias for the SSL handshake, or <code>null</code> if none.
+   * @return This builder, for chaining.
+   */
   public WebIdSSLEngineBuilder setDefaultAlias(String defaultAlias) {
     this.defaultAlias = defaultAlias;
     return this;
   }
 
+  /**
+   * Returns whether the client must supply certificates
+   * issued by the DN <code>CN=WebID, O={}</code>.
+   *
+   * The default is <code>true</code>.
+   */
+  public boolean areWebIdIssuedCertificatesRequired() {
+    return requireWebIdIssuedCertificates;
+  }
+
+  /**
+   * Sets whether the client must supply certificates
+   * issued by the DN <code>CN=WebID, O={}</code>.
+   *
+   * @return This builder, for chaining.
+   */
+  public WebIdSSLEngineBuilder setRequireWebIdIssuedCertificates(boolean require) {
+    this.requireWebIdIssuedCertificates = require;
+    return this;
+  }
+
+  /**
+   * Constructs the SSLEngine with:
+   * <ul>
+   *   <li>A {@link SniAndCertDnsKeyManager} wrapping the standard <code>PKIX</code> {@link X509ExtendedKeyManager}.</li>
+   *   <li>A {@link WebIdTrustManager} for performing WebID-TLS authentication on client certificates.</li>
+   *   <li>A <code>TLS</code> {@link SSLContext}.</li>
+   *   <li>{@link SSLParameters#setWantClientAuth(boolean)} set to <code>true</code>.</li>
+   *   <li>{@link SSLParameters#setUseCipherSuitesOrder(boolean)} set to <code>true</code>.</li>
+   * </ul>
+   *
+   * @return The built <code>SSLEngine</code>
+   * @throws NoSuchAlgorithmException If either a PKIX <code>KeyManagerFactory</code> or TLS <code>SSLContext</code> cannot be found.
+   * @throws InvalidAlgorithmParameterException If either the key manager factory or trust manager factory parameters are invalid.
+   * @throws KeyStoreException If either the key manager factory or trust manager factory keystores are invalid.
+   * @throws KeyManagementException If a <code>X509ExtendedKeyManager</code> is not available, or the <code>SSLContext</code> could not be initialized.
+   */
   public SSLEngine build() throws NoSuchAlgorithmException, InvalidAlgorithmParameterException, KeyStoreException, KeyManagementException {
     if (keyManagerKeyStoreBuilders == null) {
       throw new IllegalStateException("The key manager factory must be configured before building the SSLEngine.");
@@ -104,13 +197,14 @@ public class WebIdSSLEngineBuilder {
     }
 
     final WebIdTrustManagerFactory tmf = new WebIdTrustManagerFactory();
+    tmf.setRequireWebIdIssuedCertificates(requireWebIdIssuedCertificates);
 
     if (trustManagerKeyStore != null) {
-      tmf.engineInit(trustManagerKeyStore);
+      tmf.init(trustManagerKeyStore);
     }
 
     if (trustManagerKeyStoreParams != null) {
-      tmf.engineInit(trustManagerKeyStoreParams);
+      tmf.init(trustManagerKeyStoreParams);
     }
 
     final KeyManagerFactory kmf = KeyManagerFactory.getInstance("PKIX");
@@ -131,7 +225,7 @@ public class WebIdSSLEngineBuilder {
     }
 
     final SSLContext sslContext = SSLContext.getInstance("TLS");
-    sslContext.init(new KeyManager[] { keyManager }, tmf.engineGetTrustManagers(), null);
+    sslContext.init(new KeyManager[] { keyManager }, tmf.getTrustManagers(), null);
 
     final SSLParameters sslParams = sslContext.getDefaultSSLParameters();
 
