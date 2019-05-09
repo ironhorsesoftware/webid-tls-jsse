@@ -5,6 +5,7 @@ This Maven Java library implements [WebID-TLS](https://www.w3.org/2005/Incubator
 WebID-TLS is an authentication mechanism during the SSL handshake, using client self-signed certificates.  The server asks for a client-provided certificate, which includes a [Web ID](https://www.w3.org/2005/Incubator/webid/spec/identity/) URI.  The URI is followed to the corresponding Web ID Profile. If the server can [verify](https://www.w3.org/2005/Incubator/webid/spec/tls/#verifying-the-webid-claim) the Web ID Profile contains a copy of the public key used in the client certificate, the user is authenticated.
 
 ![WebID-TLS Authentication Diagram](https://www.w3.org/2005/Incubator/webid/spec/tls/img/WebIDSequence-friendly.png)
+_Attribution: The WebID-TLS spec._
 
 **Note:** Only RSA-based certificates are supported at this time.  The public key is [specified](https://www.w3.org/2005/Incubator/webid/spec/tls/#the-webid-profile-document) in the WebID Profile using the [Cert Ontology](https://www.w3.org/ns/auth/cert#), which only details [RSA Public Key](https://www.w3.org/ns/auth/cert#RSAPublicKey) properties to the level of detail needed for verification.
 
