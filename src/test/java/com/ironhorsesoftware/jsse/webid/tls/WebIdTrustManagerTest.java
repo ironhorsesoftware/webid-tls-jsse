@@ -2,6 +2,7 @@ package com.ironhorsesoftware.jsse.webid.tls;
 
 import static org.junit.Assert.*;
 
+import java.io.FileReader;
 import java.io.IOException;
 import java.net.HttpURLConnection;
 import java.net.Socket;
@@ -21,7 +22,14 @@ import java.security.interfaces.RSAPublicKey;
 import javax.net.ssl.SSLEngine;
 import javax.net.ssl.TrustManager;
 
+import org.apache.jena.ontology.OntModel;
+import org.apache.jena.rdf.model.Model;
+import org.apache.jena.rdf.model.ModelFactory;
+import org.apache.jena.rdf.model.Property;
+import org.apache.jena.rdf.model.Resource;
 import org.apache.jena.riot.RDFLanguages;
+import org.apache.jena.sparql.vocabulary.FOAF;
+import org.apache.jena.vocabulary.XSD;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
 import org.bouncycastle.operator.OperatorCreationException;
 import org.junit.BeforeClass;
@@ -178,7 +186,47 @@ public class WebIdTrustManagerTest {
   }
 
   @Test
-  public void testValidateClaim() {
-    // TODO: Build a model of the correct structure, the corresponding WebIdClaim, and verify they match.
+  public void testValidateClaim() throws Exception {
+    // Construct the Web ID Claim to validate.
+    final String webIdUri = "http://www.ironhorsesoftware.com/mikepigott#map";
+    final KeyPair keyPair = keyGen.generateKeyPair();
+
+    final WebIdX509CertificateBuilder builder = factory.newCertificateBuilder();
+
+    final RSAPublicKey publicKey = (RSAPublicKey) keyPair.getPublic();
+    final URI webId = new URI(webIdUri);
+
+    builder.setCommonName("Michael Pigott");
+    builder.setPublicKey(publicKey);
+    builder.addWebId(webId);
+    builder.setYearsValid(1);
+
+    final X509Certificate webIdCert = builder.build();
+
+    final WebIdClaim claim = new WebIdClaim(webIdCert, new URI(webIdUri), publicKey);
+
+    // Build a model of the correct structure, the corresponding WebIdClaim, and verify they match.
+    final String certOntologyUri =  "http://www.w3.org/ns/auth/cert#";
+
+    final FileReader reader = new FileReader("src/test/resources/cert.rdf");
+
+    final OntModel certOntology = ModelFactory.createOntologyModel();
+    certOntology.read(reader, certOntologyUri);
+
+    final Model profile = ModelFactory.createDefaultModel();
+    profile.add(certOntology);
+
+    final Property exponent = profile.getProperty(certOntologyUri + "exponent");
+    final Property modulus = profile.getProperty(certOntologyUri + "modulus");
+
+    final Resource rsaPublicKey = profile.createResource(certOntologyUri + "RSAPublicKey");
+    rsaPublicKey.addProperty(exponent, publicKey.getPublicExponent().toString(), XSD.decimal.getURI());
+    rsaPublicKey.addProperty(modulus, publicKey.getModulus().toString(), XSD.decimal.getURI());
+
+    final Property key = profile.getProperty(certOntologyUri + "key");
+    final Resource agent = profile.createResource(webIdUri, FOAF.Person);
+    agent.addProperty(key, rsaPublicKey);
+
+    WebIdTrustManager.validateClaim(profile, claim);
   }
 }
