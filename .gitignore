@@ -17,3 +17,6 @@ buildNumber.properties
 .gitignore~
 
 src/main/java/com/ironhorsesoftware/Main.java
+
+README.md~
+.DS_Store
