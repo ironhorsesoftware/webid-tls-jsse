@@ -57,7 +57,7 @@ public final class WebIdTrustManager extends X509ExtendedTrustManager {
   
     StringBuilder queryBuilder = new StringBuilder();
     queryBuilder.append("PREFIX : <http://www.w3.org/ns/auth/cert#>").append(nl);
-    queryBuilder.append("PREFIX XSD: <http://www.w3.org/2001/XMLSchema#>").append(nl);
+    queryBuilder.append("PREFIX XSD : <http://www.w3.org/2001/XMLSchema#>").append(nl);
     queryBuilder.append("ASK {").append(nl);
     queryBuilder.append("   ?webid :key [").append(nl);
     queryBuilder.append("      :modulus ?mod;").append(nl);
