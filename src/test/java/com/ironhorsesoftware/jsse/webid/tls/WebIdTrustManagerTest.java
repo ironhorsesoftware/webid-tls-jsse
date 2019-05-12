@@ -22,6 +22,7 @@ import java.security.interfaces.RSAPublicKey;
 import javax.net.ssl.SSLEngine;
 import javax.net.ssl.TrustManager;
 
+import org.apache.jena.datatypes.xsd.XSDDatatype;
 import org.apache.jena.ontology.OntModel;
 import org.apache.jena.rdf.model.Model;
 import org.apache.jena.rdf.model.ModelFactory;
@@ -29,7 +30,7 @@ import org.apache.jena.rdf.model.Property;
 import org.apache.jena.rdf.model.Resource;
 import org.apache.jena.riot.RDFLanguages;
 import org.apache.jena.sparql.vocabulary.FOAF;
-import org.apache.jena.vocabulary.XSD;
+import org.apache.jena.vocabulary.RDF;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
 import org.bouncycastle.operator.OperatorCreationException;
 import org.junit.BeforeClass;
@@ -219,9 +220,10 @@ public class WebIdTrustManagerTest {
     final Property exponent = profile.getProperty(certOntologyUri + "exponent");
     final Property modulus = profile.getProperty(certOntologyUri + "modulus");
 
-    final Resource rsaPublicKey = profile.createResource(certOntologyUri + "RSAPublicKey");
-    rsaPublicKey.addProperty(exponent, publicKey.getPublicExponent().toString(), XSD.decimal.getURI());
-    rsaPublicKey.addProperty(modulus, publicKey.getModulus().toString(), XSD.decimal.getURI());
+    final Resource rsaPublicKey = profile.createResource();
+    rsaPublicKey.addProperty(RDF.type, certOntologyUri + "RSAPublicKey");
+    rsaPublicKey.addProperty(exponent, publicKey.getPublicExponent().toString(), XSDDatatype.XSDpositiveInteger);
+    rsaPublicKey.addProperty(modulus, publicKey.getModulus().toString(), XSDDatatype.XSDpositiveInteger);
 
     final Property key = profile.getProperty(certOntologyUri + "key");
     final Resource agent = profile.createResource(webIdUri, FOAF.Person);

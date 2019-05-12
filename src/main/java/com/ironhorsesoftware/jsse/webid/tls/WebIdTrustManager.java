@@ -315,7 +315,8 @@ public final class WebIdTrustManager extends X509ExtendedTrustManager {
     throw new IllegalArgumentException("Unrecognized content type " + contentType);
   }
 
-  static void validateClaim(Model profile, WebIdClaim claim) throws CertificateException {
+  // TODO: Make package private.
+  public static void validateClaim(Model profile, WebIdClaim claim) throws CertificateException {
     final ParameterizedSparqlString query = new ParameterizedSparqlString(WEBID_CERT_SPARQL_QUERY);
     query.setIri("webid", claim.getUri().toString());
     query.setLiteral("mod", claim.getPublicKey().getModulus().toString(), XSDDatatype.XSDpositiveInteger);
