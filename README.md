@@ -2,10 +2,19 @@
 
 This Maven Java library implements [WebID-TLS](https://www.w3.org/2005/Incubator/webid/spec/tls/) via the [Java Secure Socket Extension API](https://docs.oracle.com/javase/8/docs/technotes/guides/security/jsse/JSSERefGuide.html).
 
-WebID-TLS is an authentication mechanism during the SSL handshake, using client self-signed certificates.  The server asks for a client-provided certificate, which includes a [Web ID](https://www.w3.org/2005/Incubator/webid/spec/identity/) URI.  The URI is followed to the corresponding Web ID Profile. If the server can [verify](https://www.w3.org/2005/Incubator/webid/spec/tls/#verifying-the-webid-claim) the Web ID Profile contains a copy of the public key used in the client certificate, the user is authenticated.
+WebID-TLS is an authentication mechanism during the SSL handshake, using client self-signed certificates.  Authentication happens in the following steps:
 
 ![WebID-TLS Authentication Diagram](https://www.w3.org/2005/Incubator/webid/spec/tls/img/WebIDSequence-friendly.png)
-_Attribution: The WebID-TLS spec._
+_Attribution: The WebID-TLS specification._
+
+1. Bob attempts to visit a URL on Alice's server.
+2. Alice initiates a TLS connection.
+3. Alice confirms Bob has access to the URL he requested.  If Bob is not authenticated yet, ...
+4. Alice's server asks Bob for a client-provided certificate, which includes his [Web ID](https://www.w3.org/2005/Incubator/webid/spec/identity/) URI.
+5. Alice checks if Bob's certificate is already recognized from a previous session.  If not ...
+6. Alice's server visits Bob's WebID profile and [verifies](https://www.w3.org/2005/Incubator/webid/spec/tls/#verifying-the-webid-claim) the profile contains a copy of the public key used in the client certificate.
+7. At this point, Bob is authenticated.  Alice's server returns to Step 3, and confirms Bob has access to the URL he requested.
+8. Bob receives the resource he requested from Alice's server.
 
 **Note:** Only RSA-based certificates are supported at this time.  The public key is [specified](https://www.w3.org/2005/Incubator/webid/spec/tls/#the-webid-profile-document) in the WebID Profile using the [Cert Ontology](https://www.w3.org/ns/auth/cert#), which only details [RSA Public Key](https://www.w3.org/ns/auth/cert#RSAPublicKey) properties to the level of detail needed for verification.
 
@@ -13,7 +22,7 @@ This library is under active development, but it should stabilize soon.
 
 Dependency | Version | Notes
 ---------- | ------- | -------
-Java SE    | 8 | [Significant Security Enhancements](https://docs.oracle.com/javase/8/docs/technotes/guides/security/enhancements-8.html)
+Java SE    | 8 | Java 8 provides [significant security enhancements](https://docs.oracle.com/javase/8/docs/technotes/guides/security/enhancements-8.html) that make it a good TLS endpoint.
 [BouncyCastle](http://bouncycastle.org/java.html) | 1.61 | Used to create self-signed certificates.
 [Apache Jena](https://jena.apache.org/) | 3.10.0 | Used to verify a client-provided certificate matches the WebID Profile.
 
