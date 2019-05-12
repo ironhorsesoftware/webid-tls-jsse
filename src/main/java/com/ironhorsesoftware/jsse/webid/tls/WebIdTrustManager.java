@@ -29,6 +29,7 @@ import java.util.List;
 
 import javax.net.ssl.SSLEngine;
 import javax.net.ssl.X509ExtendedTrustManager;
+import javax.xml.bind.DatatypeConverter;
 
 import org.apache.jena.datatypes.xsd.XSDDatatype;
 import org.apache.jena.query.ParameterizedSparqlString;
@@ -319,8 +320,8 @@ public final class WebIdTrustManager extends X509ExtendedTrustManager {
   public static void validateClaim(Model profile, WebIdClaim claim) throws CertificateException {
     final ParameterizedSparqlString query = new ParameterizedSparqlString(WEBID_CERT_SPARQL_QUERY);
     query.setIri("webid", claim.getUri().toString());
-    query.setLiteral("mod", claim.getPublicKey().getModulus().toString(), XSDDatatype.XSDpositiveInteger);
-    query.setLiteral("exp", claim.getPublicKey().getPublicExponent().toString(), XSDDatatype.XSDpositiveInteger);
+    query.setLiteral("mod", DatatypeConverter.printHexBinary(claim.getPublicKey().getModulus().toByteArray()), XSDDatatype.XSDhexBinary);
+    query.setLiteral("exp", claim.getPublicKey().getPublicExponent().toString(), XSDDatatype.XSDinteger);
 
     final Query ask = QueryFactory.create(query.toString());
     QueryExecution answerer = QueryExecutionFactory.create(ask, profile);

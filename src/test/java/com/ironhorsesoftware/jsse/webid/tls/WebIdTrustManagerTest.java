@@ -21,6 +21,7 @@ import java.security.interfaces.RSAPublicKey;
 
 import javax.net.ssl.SSLEngine;
 import javax.net.ssl.TrustManager;
+import javax.xml.bind.DatatypeConverter;
 
 import org.apache.jena.datatypes.xsd.XSDDatatype;
 import org.apache.jena.ontology.OntModel;
@@ -222,8 +223,8 @@ public class WebIdTrustManagerTest {
 
     final Resource rsaPublicKey = profile.createResource();
     rsaPublicKey.addProperty(RDF.type, certOntologyUri + "RSAPublicKey");
-    rsaPublicKey.addProperty(exponent, publicKey.getPublicExponent().toString(), XSDDatatype.XSDpositiveInteger);
-    rsaPublicKey.addProperty(modulus, publicKey.getModulus().toString(), XSDDatatype.XSDpositiveInteger);
+    rsaPublicKey.addProperty(exponent, publicKey.getPublicExponent().toString(), XSDDatatype.XSDinteger);
+    rsaPublicKey.addProperty(modulus, DatatypeConverter.printHexBinary(publicKey.getModulus().toByteArray()), XSDDatatype.XSDhexBinary);
 
     final Property key = profile.getProperty(certOntologyUri + "key");
     final Resource agent = profile.createResource(webIdUri, FOAF.Person);
